@@ -316,6 +316,8 @@ def selectChunks(headerList):
     
     """
     stdscr = curses.initscr()
+    curses.start_color()
+    
     chunkSelector = CursesChunkSelector(headerList)
     curses.wrapper(chunkSelector.main)
     
@@ -426,65 +428,76 @@ class CursesChunkSelector(object):
             chunk.folded = not chunk.folded
         
     def updateScreen(self):
-        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE) # applied
-        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK) # unapplied
-        curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_RED) # selected
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLUE) # status/legend
-        #self.stdscr.clear()
-        #self.stdscr.refresh()
-        
         self.statuswin.erase()
-        #self.statuswin.refresh()
+        self.chunkwin.erase()
+
+        width = self.xScreenSize
+        def alignString(inStr):
+            """
+            Add whitespace to the end of a string in order to make it fill
+            the screen in the x direction.
+            
+            """
+            return inStr + " " * (width - (len(inStr) % width))
+
+        # print out the status lines at the top
         try:
-            self.statuswin.addstr("SELECT CHUNKS: (j/k/up/down) move cursor; (space) toggle applied; (q)uit", curses.color_pair(4))
-            self.statuswin.addstr("\n (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded", curses.color_pair(4))
+            self.statuswin.addstr(alignString("SELECT CHUNKS: (j/k/up/down) move cursor; (space) toggle applied; (q)uit"), curses.color_pair(4))
+            self.statuswin.addstr(alignString(" (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded"), curses.color_pair(4))
         except curses.error:
             pass
-        #self.statuswin.refresh()      
-        
-        self.chunkwin.erase()
-        chunkStringList = []
-        for c in self.chunkList:
-            chunkStringList.append((c.applied, c.prettyStr()))
-        
-        def printText(checkBox, text, colorPair):
-            textList = text.split("\n")
-            self.chunkwin.addstr(checkBox + textList[0] + "\n", colorPair)
-            if len(textList) > 1:
-                for line in textList[1:]:
-                    self.chunkwin.addstr("     " + line + "\n", colorPair)
-        
-        skippedChunks = 0
-        for i,cs in enumerate(chunkStringList):
-            #self.chunkwin.addstr("*"*30)
-            applied = cs[0]
-            chunkText = cs[1]
-            try:
-                folded = self.chunkList[i].folded
-            except AttributeError: # not a header
-                folded = False
+
+        # print out the chunks in the remaining part of the window
+        def printChunk(chunk):
+            """
+            Print the chunk to the chunk-window with appropriate coloring and
+            highlighting to indicate the selected and applied status of the
+            chunk, and to indicate whether it is a header or a hunk.
             
-            if applied:
+            """
+            text = chunk.prettyStr()
+            chunkIndex = self.chunkList.index(chunk)
+
+            # create checkBox string
+            if chunk.applied:
                 checkBox = "[X]"
             else:
                 checkBox = "[ ]"
-            
-            if folded:
-                checkBox += "**"
-            else:
+
+            try:
+                if chunk.folded:
+                    checkBox += "**"
+                else:
+                    checkBox += "  "
+            except AttributeError: # not a header
                 checkBox += "  "
+
+            # choose correct colorPair
+            if chunkIndex == self.selectedChunkIndex:
+                colorPair = curses.color_pair(3)
+            elif chunk.applied:
+                colorPair = curses.color_pair(1)
+            else:
+                colorPair = curses.color_pair(2)
+
+            # print out each line of the chunk, expanding it to screen width
+            textList = text.split("\n")
+            lineStr = checkBox + textList[0]
+            self.chunkwin.addstr(alignString(lineStr), colorPair)
+            if len(textList) > 1:
+                for line in textList[1:]:
+                    lineStr = "     " + line
+                    self.chunkwin.addstr(alignString(lineStr), colorPair)
+
+        
+        skippedChunks = 0        
+        for i,c in enumerate(self.chunkList):            
             
-            #text = str(curses.COLS)
             try:
                 if i >= self.firstChunkToDisplay:
                     if (isinstance(self.chunkList[i], hunk) and not self.chunkList[i].header.folded) \
                             or isinstance(self.chunkList[i], header):
-                        if self.selectedChunkIndex == i:
-                            printText(checkBox, chunkText, curses.color_pair(3))
-                        elif applied:
-                            printText(checkBox, chunkText, curses.color_pair(1))
-                        else:
-                            printText(checkBox, chunkText, curses.color_pair(2))
+                        printChunk(c)
                         self.lastChunkToDisplay = i
                         skippedChunks = 0 # keeps track of chunks not displayed
                     else:
@@ -492,7 +505,6 @@ class CursesChunkSelector(object):
             except curses.error:
                 self.lastChunkToDisplay = i - (skippedChunks + 1)
                 break
-        #self.chunkwin.addstr("*"*30)
         
         self.chunkwin.refresh()
         self.statuswin.refresh()
@@ -502,10 +514,10 @@ class CursesChunkSelector(object):
         try:
             curses.endwin()
             self.stdscr = curses.initscr()
-            yScreenSize, xScreenSize = self.stdscr.getmaxyx()
+            self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
 
-            self.statuswin = curses.newwin(2,xScreenSize,0,0)
-            self.chunkwin = curses.newwin(yScreenSize-2,xScreenSize,2, 0)
+            self.statuswin = curses.newwin(2,self.xScreenSize,0,0)
+            self.chunkwin = curses.newwin(self.yScreenSize-2,self.xScreenSize,2, 0)
             #curses.resizeterm(...)
         except curses.error:
             pass
@@ -517,6 +529,14 @@ class CursesChunkSelector(object):
         """
         signal.signal(signal.SIGWINCH, self.sigwinchHandler)
         self.stdscr = stdscr
+        self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
+        
+        # available colors: black, blue, cyan, green, magenta, white, yellow
+        # init_pair(color_id, foreground_color, background_color)
+        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE) # applied
+        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK) # unapplied
+        curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_RED) # selected
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLUE) # status/legend
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(2,0,0,0)
         self.chunkwin = curses.newwin(0,0,2, 0)
