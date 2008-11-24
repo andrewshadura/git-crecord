@@ -344,6 +344,11 @@ class CursesChunkSelector(object):
         self.lastChunkToDisplay = None # updated when printing chunks to current display 
         self.selectedChunkIndex = 0
         self.lastKeyPressed = ""
+        # dictionary mapping (fgColor,bgColor) pairs to the corresponding curses
+        # color-pair value.
+        self.colorPairs = {}
+        # maps custom nicknames of color-pairs to curses color-pair values
+        self.colorPairNames = {}
         
     
     def scroll(self, numHunks):
@@ -435,15 +440,58 @@ class CursesChunkSelector(object):
         def alignString(inStr):
             """
             Add whitespace to the end of a string in order to make it fill
-            the screen in the x direction.
+            the screen in the x direction.  The current cursor position is
+            taken into account when making this calculation.
             
             """
-            return inStr + " " * (width - (len(inStr) % width))
+            y,xStart = self.chunkwin.getyx()
+            return inStr + " " * (width - (len(inStr) % width) - xStart)
+
+        def printString(window, text, fgColor=None, bgColor=None, pairName=None, attrList=None):
+            """
+            Print the string, text, with the specified colors and attributes, to
+            the specified curses window object.
+            
+            The foreground and background colors are of the form
+            curses.COLOR_XXXX, where XXXX is one of: [BLACK, BLUE, CYAN, GREEN,
+            MAGENTA, RED, WHITE, YELLOW].  If pairName is provided, a color
+            pair will be looked up in the self.colorPairNames dictionary.
+            
+            attrList is a list containing text attributes in the form of 
+            curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
+            UNDERLINE].
+            
+            """
+            if pairName is not None:
+                colorPair = self.colorPairNames[pairName]
+            else:
+                if fgColor is None:
+                    fgColor = curses.COLOR_WHITE
+                if bgColor is None:
+                    bgColor = curses.COLOR_BLACK
+                if self.colorPairs.has_key((fgColor,bgColor)):
+                    colorPair = self.colorPairs[(fgColor,bgColor)]
+                else:
+                    colorPair = self.getColorPair(fgColor, bgColor)
+            # add attributes if possible
+            if attrList is None:
+                attrList = []
+            if colorPair < 256:
+                # then it is safe to apply all attributes
+                for textAttr in attrList:
+                    colorPair |= textAttr
+            else:
+                # just apply a select few (safe?)
+                if curses.A_UNDERLINE in attrList:
+                    colorPair |= curses.A_UNDERLINE
+                    
+            window.addstr(text, colorPair)
+            
 
         # print out the status lines at the top
         try:
-            self.statuswin.addstr(alignString("SELECT CHUNKS: (j/k/up/down) move cursor; (space) toggle applied; (q)uit"), curses.color_pair(4))
-            self.statuswin.addstr(alignString(" (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded"), curses.color_pair(4))
+            printString(self.statuswin, alignString("SELECT CHUNKS: (j/k/up/down) move cursor; (space) toggle applied; (q)uit"), pairName="legend")
+            printString(self.statuswin, alignString(" (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded"), pairName="legend")
         except curses.error:
             pass
 
@@ -471,14 +519,16 @@ class CursesChunkSelector(object):
                     checkBox += "  "
             except AttributeError: # not a header
                 checkBox += "  "
-
+            
             # choose correct colorPair
             if chunkIndex == self.selectedChunkIndex:
-                colorPair = curses.color_pair(3)
+                colorPair = self.getColorPair(name="selected")
             elif chunk.applied:
-                colorPair = curses.color_pair(1)
+                colorPair = self.getColorPair(name="applied")
             else:
-                colorPair = curses.color_pair(2)
+                colorPair = self.getColorPair(name="unapplied")
+            
+            
 
             # print out each line of the chunk, expanding it to screen width
             textList = text.split("\n")
@@ -522,6 +572,40 @@ class CursesChunkSelector(object):
         except curses.error:
             pass
     
+    def getColorPair(self, fgColor=None, bgColor=None, name=None):
+        """
+        Get a curses color pair, adding it to self.colorPairs if it is not already
+        defined.  An optional string, name, can be passed as a shortcut for
+        referring to the color-pair.  By default, if no arguments are specified,
+        the white foreground / black background color-pair is returned.
+        
+        It is expected that this function will be used exclusively for initializing
+        color pairs, and NOT curses.init_pair().
+        
+        """
+        if (name is not None) and self.colorPairNames.has_key(name):
+            # then get the associated color pair and return it
+            colorPair = self.colorPairNames[name]
+            return colorPair
+        if fgColor is None:
+            fgColor = curses.COLOR_WHITE
+        if bgColor is None:
+            bgColor = curses.COLOR_BLACK
+        if self.colorPairs.has_key((fgColor,bgColor)):
+            colorPair = self.colorPairs[(fgColor,bgColor)]
+        else:
+            pairIndex = len(self.colorPairs) + 1
+            curses.init_pair(pairIndex, fgColor, bgColor)
+            colorPair = self.colorPairs[(fgColor, bgColor)] = curses.color_pair(pairIndex)
+            if name is not None:
+                self.colorPairNames[name] = curses.color_pair(pairIndex)
+        
+        return colorPair
+    
+    def initColorPair(self, *args, **kwargs):
+        "Same as getColorPair."
+        self.getColorPair(*args, **kwargs)    
+    
     def main(self, stdscr):
         """
         Method to be wrapped by curses.wrapper() for selecting chunks.
@@ -533,10 +617,10 @@ class CursesChunkSelector(object):
         
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
-        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE) # applied
-        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK) # unapplied
-        curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_RED) # selected
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLUE) # status/legend
+        self.initColorPair(curses.COLOR_RED, curses.COLOR_WHITE, name="applied")
+        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="unapplied")
+        self.initColorPair(curses.COLOR_BLUE, curses.COLOR_RED, name="selected")
+        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(2,0,0,0)
         self.chunkwin = curses.newwin(0,0,2, 0)
