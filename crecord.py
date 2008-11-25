@@ -521,12 +521,19 @@ class CursesChunkSelector(object):
                 checkBox += "  "
             
             # choose correct colorPair
-            if chunkIndex == self.selectedChunkIndex:
-                colorPair = self.getColorPair(name="selected")
-            elif chunk.applied:
-                colorPair = self.getColorPair(name="applied")
+            if isinstance(chunk, header):
+                if chunkIndex != 0:
+                    # add separating line before headers
+                    self.chunkwin.addstr('_'*width)
+                if chunkIndex == self.selectedChunkIndex:
+                    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
+                else:
+                    colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
             else:
-                colorPair = self.getColorPair(name="unapplied")
+                if chunkIndex == self.selectedChunkIndex:
+                    colorPair = self.getColorPair(name="selected")
+                else:
+                    colorPair = self.getColorPair(name="normal")
             
             
 
@@ -540,8 +547,8 @@ class CursesChunkSelector(object):
                     self.chunkwin.addstr(alignString(lineStr), colorPair)
 
         
-        skippedChunks = 0        
-        for i,c in enumerate(self.chunkList):            
+        skippedChunks = 0
+        for i,c in enumerate(self.chunkList):
             
             try:
                 if i >= self.firstChunkToDisplay:
@@ -572,7 +579,7 @@ class CursesChunkSelector(object):
         except curses.error:
             pass
     
-    def getColorPair(self, fgColor=None, bgColor=None, name=None):
+    def getColorPair(self, fgColor=None, bgColor=None, name=None, attrList=None):
         """
         Get a curses color pair, adding it to self.colorPairs if it is not already
         defined.  An optional string, name, can be passed as a shortcut for
@@ -582,24 +589,40 @@ class CursesChunkSelector(object):
         It is expected that this function will be used exclusively for initializing
         color pairs, and NOT curses.init_pair().
         
+        attrList is used to 'flavor' the returned color-pair.  This information
+        is not stored in self.colorPairs.  It contains attribute values like
+        curses.A_BOLD.
+        
         """
         if (name is not None) and self.colorPairNames.has_key(name):
             # then get the associated color pair and return it
             colorPair = self.colorPairNames[name]
-            return colorPair
-        if fgColor is None:
-            fgColor = curses.COLOR_WHITE
-        if bgColor is None:
-            bgColor = curses.COLOR_BLACK
-        if self.colorPairs.has_key((fgColor,bgColor)):
-            colorPair = self.colorPairs[(fgColor,bgColor)]
         else:
-            pairIndex = len(self.colorPairs) + 1
-            curses.init_pair(pairIndex, fgColor, bgColor)
-            colorPair = self.colorPairs[(fgColor, bgColor)] = curses.color_pair(pairIndex)
-            if name is not None:
-                self.colorPairNames[name] = curses.color_pair(pairIndex)
+            if fgColor is None:
+                fgColor = curses.COLOR_WHITE
+            if bgColor is None:
+                bgColor = curses.COLOR_BLACK
+            if self.colorPairs.has_key((fgColor,bgColor)):
+                colorPair = self.colorPairs[(fgColor,bgColor)]
+            else:
+                pairIndex = len(self.colorPairs) + 1
+                curses.init_pair(pairIndex, fgColor, bgColor)
+                colorPair = self.colorPairs[(fgColor, bgColor)] = curses.color_pair(pairIndex)
+                if name is not None:
+                    self.colorPairNames[name] = curses.color_pair(pairIndex)
         
+        # add attributes if possible
+        if attrList is None:
+            attrList = []
+        if colorPair < 256:
+            # then it is safe to apply all attributes
+            for textAttr in attrList:
+                colorPair |= textAttr
+        else:
+            # just apply a select few (safe?) attributes
+            for textAttrib in (curses.A_UNDERLINE, curses.A_BOLD):
+                if textAttrib in attrList:
+                    colorPair |= textAttrib
         return colorPair
     
     def initColorPair(self, *args, **kwargs):
@@ -617,9 +640,10 @@ class CursesChunkSelector(object):
         
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
-        self.initColorPair(curses.COLOR_RED, curses.COLOR_WHITE, name="applied")
-        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="unapplied")
-        self.initColorPair(curses.COLOR_BLUE, curses.COLOR_RED, name="selected")
+        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="normal")
+        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_RED, name="selected")
+        self.initColorPair(curses.COLOR_RED, curses.COLOR_BLACK, name="deletion")
+        self.initColorPair(curses.COLOR_GREEN, curses.COLOR_BLACK, name="addition")
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(2,0,0,0)
