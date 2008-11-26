@@ -68,6 +68,17 @@ def scanpatch(fp):
             else:
                 raise patch.PatchError('unknown patch content: %r' % line)
 
+class Patch(list):
+    """
+    List of header objects representing the patch.
+    
+    """
+    def __init__(self, headerList):
+        self.extend(headerList)
+        # add parent patch object reference to each header
+        for header in self:
+            header.patch = self
+
 class header(object):
     """patch header
 
@@ -85,6 +96,9 @@ class header(object):
         self.applied = True
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = False
+        
+        # list of all headers in patch
+        self.patch = None
 
     def binary(self):
         """
@@ -150,6 +164,67 @@ class header(object):
         for h in self.header:
             if self.special_re.match(h):
                 return True
+    
+    def nextHeader(self):
+        """
+        Return a reference to the next header in the patch.  If there is no
+        next header, return None.
+        
+        """
+        numHeadersInPatch = len(self.patch)
+        indexOfThisHeader = self.patch.index(self)
+        if indexOfThisHeader < numHeadersInPatch - 1:
+            return self.patch[indexOfThisHeader + 1]
+        else:
+            return None
+
+    def prevHeader(self):
+        """
+        Return a reference to the previous header in the patch.  If there is no
+        previous header, return None.
+        
+        """
+        indexOfThisHeader = self.patch.index(self)
+        if indexOfThisHeader > 0:
+            return self.patch[indexOfThisHeader - 1]
+        else:
+            return None
+
+class HunkLine(object):
+    "Represents a changed line in a hunk"
+    def __init__(self, lineText, hunk):
+        self.lineText = lineText
+        self.applied = True
+        # the parent hunk to which this line belongs
+        self.hunk = hunk
+    
+    def prettyStr(self):
+        return self.lineText
+    
+    def nextLine(self):
+        """
+        Return a reference to the next changed line belonging to the same hunk
+        as this line.  If there is no next line, return None.
+        
+        """
+        numLinesInHunk = len(self.hunk.changedLines)
+        indexOfThisLine = self.hunk.changedLines.index(self)
+        if indexOfThisLine < numLinesInHunk - 1:
+            return self.hunk.changedLines[indexOfThisLine + 1]
+        else:
+            return None
+
+    def prevLine(self):
+        """
+        Return a reference to the previous changed line belonging to the same hunk
+        as this line.  If there is no previous line, return None.
+        
+        """
+        indexOfThisLine = self.hunk.changedLines.index(self)
+        if indexOfThisLine > 0:
+            return self.hunk.changedLines[indexOfThisLine - 1]
+        else:
+            return None
 
 class hunk(object):
     """patch hunk
@@ -170,10 +245,37 @@ class hunk(object):
         self.toline, self.after = trimcontext(toline, after)
         self.proc = proc
         self.hunk = hunk
+        self.changedLines = [HunkLine(line, self) for line in hunk]
         self.added, self.removed = self.countchanges(self.hunk)
         
         # flag to indicate whether to apply this chunk
         self.applied = True
+        #import rpdb2; rpdb2.start_embedded_debugger("secret")
+
+    def nextHunk(self):
+        """
+        Return a reference to the next hunk belonging to the same header as
+        this hunk.  If there is no next hunk, return None.
+        
+        """
+        numHunksInHeader = len(self.header.hunks)
+        indexOfThisHunk = self.header.hunks.index(self)
+        if indexOfThisHunk < numHunksInHeader - 1:
+            return self.header.hunks[indexOfThisHunk + 1]
+        else:
+            return None
+
+    def prevHunk(self):
+        """
+        Return a reference to the previous hunk belonging to the same header as
+        this hunk.  If there is no previous hunk, return None.
+        
+        """
+        indexOfThisHunk = self.header.hunks.index(self)
+        if indexOfThisHunk > 0:
+            return self.header.hunks[indexOfThisHunk - 1]
+        else:
+            return None
     
     @staticmethod
     def countchanges(hunk):
@@ -182,15 +284,19 @@ class hunk(object):
         rem = len([h for h in hunk if h[0] == '-'])
         return add, rem
 
-    def write(self, fp):
+    def getFromToLine(self):
         delta = len(self.before) + len(self.after)
         if self.after and self.after[-1] == '\\ No newline at end of file\n':
             delta -= 1
         fromlen = delta + self.removed
         tolen = delta + self.added
-        fp.write('@@ -%d,%d +%d,%d @@%s\n' %
+        fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % \
                  (self.fromline, fromlen, self.toline, tolen,
-                  self.proc and (' ' + self.proc)))
+                  self.proc and (' ' + self.proc))
+        return fromToLine
+
+    def write(self, fp):
+        fp.write(self.getFromToLine())
         fp.write(''.join(self.before + self.hunk + self.after))
 
     pretty = write
@@ -330,7 +436,8 @@ def selectChunks(headerList):
 
 class CursesChunkSelector(object):
     def __init__(self, headerList):
-        self.headerList = headerList
+        # put the headers into a patch object
+        self.headerList = Patch(headerList)
         
         # list of all chunks
         self.chunkList = []
@@ -343,13 +450,15 @@ class CursesChunkSelector(object):
         # really, a 'last chunk that was displayed' variable
         self.lastChunkToDisplay = None # updated when printing chunks to current display 
         self.selectedChunkIndex = 0
-        self.lastKeyPressed = ""
+        #self.lastKeyPressed = ""
         # dictionary mapping (fgColor,bgColor) pairs to the corresponding curses
         # color-pair value.
         self.colorPairs = {}
         # maps custom nicknames of color-pairs to curses color-pair values
         self.colorPairNames = {}
         
+        # the currently selected header, hunk, or hunk-line
+        self.currentSelectedItem = self.headerList[0]
     
     def scroll(self, numHunks):
         """
@@ -432,61 +541,68 @@ class CursesChunkSelector(object):
         if isinstance(chunk, header):
             chunk.folded = not chunk.folded
         
+
+    def alignString(self, inStr):
+        """
+        Add whitespace to the end of a string in order to make it fill
+        the screen in the x direction.  The current cursor position is
+        taken into account when making this calculation.  The string can span
+        multiple lines.
+        
+        """
+        y,xStart = self.chunkwin.getyx()
+        width = self.xScreenSize
+        return inStr + " " * (width - (len(inStr) % width) - xStart)
+
+    def printString(self, window, text, fgColor=None, bgColor=None, pairName=None, attrList=None):
+        """
+        Print the string, text, with the specified colors and attributes, to
+        the specified curses window object.
+        
+        The foreground and background colors are of the form
+        curses.COLOR_XXXX, where XXXX is one of: [BLACK, BLUE, CYAN, GREEN,
+        MAGENTA, RED, WHITE, YELLOW].  If pairName is provided, a color
+        pair will be looked up in the self.colorPairNames dictionary.
+        
+        attrList is a list containing text attributes in the form of 
+        curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
+        UNDERLINE].
+        
+        """
+        if pairName is not None:
+            colorPair = self.colorPairNames[pairName]
+        else:
+            if fgColor is None:
+                fgColor = curses.COLOR_WHITE
+            if bgColor is None:
+                bgColor = curses.COLOR_BLACK
+            if self.colorPairs.has_key((fgColor,bgColor)):
+                colorPair = self.colorPairs[(fgColor,bgColor)]
+            else:
+                colorPair = self.getColorPair(fgColor, bgColor)
+        # add attributes if possible
+        if attrList is None:
+            attrList = []
+        if colorPair < 256:
+            # then it is safe to apply all attributes
+            for textAttr in attrList:
+                colorPair |= textAttr
+        else:
+            # just apply a select few (safe?) attributes
+            for textAttr in (curses.A_UNDERLINE, curses.A_BOLD):
+                if textAttr in attrList:
+                    colorPair |= textAttr
+                
+        window.addstr(text, colorPair)
+
+
     def updateScreen(self):
         self.statuswin.erase()
         self.chunkwin.erase()
 
         width = self.xScreenSize
-        def alignString(inStr):
-            """
-            Add whitespace to the end of a string in order to make it fill
-            the screen in the x direction.  The current cursor position is
-            taken into account when making this calculation.
-            
-            """
-            y,xStart = self.chunkwin.getyx()
-            return inStr + " " * (width - (len(inStr) % width) - xStart)
-
-        def printString(window, text, fgColor=None, bgColor=None, pairName=None, attrList=None):
-            """
-            Print the string, text, with the specified colors and attributes, to
-            the specified curses window object.
-            
-            The foreground and background colors are of the form
-            curses.COLOR_XXXX, where XXXX is one of: [BLACK, BLUE, CYAN, GREEN,
-            MAGENTA, RED, WHITE, YELLOW].  If pairName is provided, a color
-            pair will be looked up in the self.colorPairNames dictionary.
-            
-            attrList is a list containing text attributes in the form of 
-            curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
-            UNDERLINE].
-            
-            """
-            if pairName is not None:
-                colorPair = self.colorPairNames[pairName]
-            else:
-                if fgColor is None:
-                    fgColor = curses.COLOR_WHITE
-                if bgColor is None:
-                    bgColor = curses.COLOR_BLACK
-                if self.colorPairs.has_key((fgColor,bgColor)):
-                    colorPair = self.colorPairs[(fgColor,bgColor)]
-                else:
-                    colorPair = self.getColorPair(fgColor, bgColor)
-            # add attributes if possible
-            if attrList is None:
-                attrList = []
-            if colorPair < 256:
-                # then it is safe to apply all attributes
-                for textAttr in attrList:
-                    colorPair |= textAttr
-            else:
-                # just apply a select few (safe?)
-                if curses.A_UNDERLINE in attrList:
-                    colorPair |= curses.A_UNDERLINE
-                    
-            window.addstr(text, colorPair)
-            
+        alignString = self.alignString
+        printString = self.printString
 
         # print out the status lines at the top
         try:
@@ -495,57 +611,17 @@ class CursesChunkSelector(object):
         except curses.error:
             pass
 
-        # print out the chunks in the remaining part of the window
-        def printChunk(chunk):
-            """
-            Print the chunk to the chunk-window with appropriate coloring and
-            highlighting to indicate the selected and applied status of the
-            chunk, and to indicate whether it is a header or a hunk.
-            
-            """
-            text = chunk.prettyStr()
-            chunkIndex = self.chunkList.index(chunk)
 
-            # create checkBox string
-            if chunk.applied:
-                checkBox = "[X]"
-            else:
-                checkBox = "[ ]"
-
-            try:
-                if chunk.folded:
-                    checkBox += "**"
-                else:
-                    checkBox += "  "
-            except AttributeError: # not a header
-                checkBox += "  "
-            
-            # choose correct colorPair
-            if isinstance(chunk, header):
-                if chunkIndex != 0:
-                    # add separating line before headers
-                    self.chunkwin.addstr('_'*width)
-                if chunkIndex == self.selectedChunkIndex:
-                    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
-                else:
-                    colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
-            else:
-                if chunkIndex == self.selectedChunkIndex:
-                    colorPair = self.getColorPair(name="selected")
-                else:
-                    colorPair = self.getColorPair(name="normal")
-            
-            
-
-            # print out each line of the chunk, expanding it to screen width
-            textList = text.split("\n")
-            lineStr = checkBox + textList[0]
-            self.chunkwin.addstr(alignString(lineStr), colorPair)
-            if len(textList) > 1:
-                for line in textList[1:]:
-                    lineStr = "     " + line
-                    self.chunkwin.addstr(alignString(lineStr), colorPair)
-
+        # print out the patch in the remaining part of the window
+        try:
+            self.printItem(self.headerList)
+        except curses.error:
+            pass
+        
+        self.chunkwin.refresh()
+        self.statuswin.refresh()
+        
+        return #DEBUG
         
         skippedChunks = 0
         for i,c in enumerate(self.chunkList):
@@ -565,7 +641,99 @@ class CursesChunkSelector(object):
         
         self.chunkwin.refresh()
         self.statuswin.refresh()
+
+    def getStatusPrefixString(self, item):
+        """
+        Create a string to prefix a line with which indicates whether 'item'
+        is applied and/or folded.
         
+        """
+        # create checkBox string
+        if item.applied:
+            checkBox = "[X]"
+        else:
+            checkBox = "[ ]"
+
+        try:
+            if item.folded:
+                checkBox += "**"
+            else:
+                checkBox += "  "
+        except AttributeError: # not foldable
+            checkBox += "  "
+        
+        return checkBox
+
+    def printHeader(self, header):
+        text = header.prettyStr()
+        chunkIndex = self.chunkList.index(header)
+        checkBox = self.getStatusPrefixString(header)
+        
+        if chunkIndex != 0:
+            # add separating line before headers
+            self.chunkwin.addstr('_'*self.xScreenSize)
+        # select color-pair based on if the header is selected
+        if chunkIndex == self.selectedChunkIndex:
+            colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
+        else:
+            colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
+
+        # print out each line of the chunk, expanding it to screen width
+        textList = text.split("\n")
+        lineStr = checkBox + textList[0]
+        self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+        if len(textList) > 1:
+            for line in textList[1:]:
+                lineStr = "     " + line
+                self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+    
+    def printHunkLinesBefore(self, hunk):
+        "includes start/end line indicator"
+        frToLine = hunk.getFromToLine().strip("\n")
+        self.chunkwin.addstr(self.alignString(frToLine))
+        #contextLinesBefore = ''.join(hunk.before)
+        #self.chunkwin.addstr(self.alignString(contextLinesBefore))
+        for line in hunk.before:
+            self.chunkwin.addstr(self.alignString(line.strip("\n")))
+        
+    def printHunkLinesAfter(self, hunk):
+        for line in hunk.after:
+            self.chunkwin.addstr(self.alignString(line.strip("\n")))
+        
+    def printHunkChangedLine(self, hunkLine):
+        # select color-pair based on whether line is an addition/removal
+        #if chunkIndex == self.selectedChunkIndex:
+        #    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
+        #else:
+        lineStr = hunkLine.prettyStr().strip("\n")
+        if lineStr.startswith("+"):
+            colorPair = self.getColorPair(name="addition")
+        elif lineStr.startswith("-"):
+            colorPair = self.getColorPair(name="deletion")
+        
+        self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+    
+    def printItem(self, item):
+        "Recursive method for printing out patch/header/hunk/hunk-line data to screen"
+        # Patch object is a list of headers
+        if isinstance(item, Patch):
+            for hdr in item:
+                self.printItem(hdr)
+        if isinstance(item, header):
+            self.printHeader(item)
+            for hnk in item.hunks:
+                self.printItem(hnk)
+        elif isinstance(item, hunk):
+            # print the hunk data which comes before the changed-lines
+            self.printHunkLinesBefore(item)
+            # unfortunate naming - 'hunk' is a list of HunkLine objects
+            for line in item.changedLines:
+                self.printItem(line)
+            self.printHunkLinesAfter(item)
+        elif isinstance(item, HunkLine):
+            self.printHunkChangedLine(item)
+    
+    
     def sigwinchHandler(self, n, frame):
         "Handle window resizing"
         try:
