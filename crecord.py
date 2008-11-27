@@ -165,7 +165,7 @@ class header(object):
             if self.special_re.match(h):
                 return True
     
-    def nextHeader(self):
+    def nextItem(self):
         """
         Return a reference to the next header in the patch.  If there is no
         next header, return None.
@@ -178,7 +178,7 @@ class header(object):
         else:
             return None
 
-    def prevHeader(self):
+    def prevItem(self):
         """
         Return a reference to the previous header in the patch.  If there is no
         previous header, return None.
@@ -187,6 +187,20 @@ class header(object):
         indexOfThisHeader = self.patch.index(self)
         if indexOfThisHeader > 0:
             return self.patch[indexOfThisHeader - 1]
+        else:
+            return None
+
+    def parentItem(self):
+        """
+        There is no 'real' parent item of a header that can be selected,
+        so return None.
+        """
+        return None
+    
+    def firstChild(self):
+        "Return the first child of this item, if one exists.  Otherwise None."
+        if len(self.hunks) > 0:
+            return self.hunks[0]
         else:
             return None
 
@@ -201,7 +215,7 @@ class HunkLine(object):
     def prettyStr(self):
         return self.lineText
     
-    def nextLine(self):
+    def nextItem(self):
         """
         Return a reference to the next changed line belonging to the same hunk
         as this line.  If there is no next line, return None.
@@ -214,7 +228,7 @@ class HunkLine(object):
         else:
             return None
 
-    def prevLine(self):
+    def prevItem(self):
         """
         Return a reference to the previous changed line belonging to the same hunk
         as this line.  If there is no previous line, return None.
@@ -225,6 +239,15 @@ class HunkLine(object):
             return self.hunk.changedLines[indexOfThisLine - 1]
         else:
             return None
+        
+    def parentItem(self):
+        "Return the parent to the current item"
+        return self.hunk
+
+    def firstChild(self):
+        "Return the first child of this item, if one exists.  Otherwise None."
+        # hunk-lines don't have children
+        return None
 
 class hunk(object):
     """patch hunk
@@ -250,9 +273,8 @@ class hunk(object):
         
         # flag to indicate whether to apply this chunk
         self.applied = True
-        #import rpdb2; rpdb2.start_embedded_debugger("secret")
 
-    def nextHunk(self):
+    def nextItem(self):
         """
         Return a reference to the next hunk belonging to the same header as
         this hunk.  If there is no next hunk, return None.
@@ -265,7 +287,7 @@ class hunk(object):
         else:
             return None
 
-    def prevHunk(self):
+    def prevItem(self):
         """
         Return a reference to the previous hunk belonging to the same header as
         this hunk.  If there is no previous hunk, return None.
@@ -274,6 +296,17 @@ class hunk(object):
         indexOfThisHunk = self.header.hunks.index(self)
         if indexOfThisHunk > 0:
             return self.header.hunks[indexOfThisHunk - 1]
+        else:
+            return None
+
+    def parentItem(self):
+        "Return the parent to the current item"
+        return self.header
+
+    def firstChild(self):
+        "Return the first child of this item, if one exists.  Otherwise None."
+        if len(self.changedLines) > 0:
+            return self.changedLines[0]
         else:
             return None
     
@@ -472,12 +505,27 @@ class CursesChunkSelector(object):
     
     def upArrowEvent(self):
         """
-        If the cursor is already at the top chunk, scroll the screen down and move the cursor-position
-        to the previous visible chunk.  Otherwise, only move the cursor position up one visible chunk.
+        Select (if possible) the previous item on the same level as the currently
+        selected item.  Otherwise, select (if possible) the parent-item of the
+        currently selected item.
         
-        Also deal with folded headers.
+        If the currently selected item is already at the top of the screen, 
+        scroll the screen down to show the new-selected item.
         
         """
+        currentItem = self.currentSelectedItem
+        nextItem = currentItem.prevItem()
+        # if there's no previous item on this level, try choosing the parent
+        if nextItem is None:
+            nextItem = currentItem.parentItem()
+        if nextItem is None:
+            # if no parent item (i.e. currentItem is the first header), then
+            # no change...
+            nextItem = currentItem
+        
+        self.currentSelectedItem = nextItem
+        
+        return # DEBUG
         # calculate number of chunks to move/scroll by
         if self.selectedChunkIndex != 0:
             preceedingChunk = self.chunkList[self.selectedChunkIndex-1]
@@ -495,8 +543,28 @@ class CursesChunkSelector(object):
         """
         If the cursor is already at the bottom chunk, scroll the screen up and move the cursor-position
         to the subsequent chunk.  Otherwise, only move the cursor position down one chunk.
-        
+
         """
+        # TODO: update docstring
+        
+        currentItem = self.currentSelectedItem
+        nextItem = currentItem.nextItem()
+        # if there's no previous item on this level, try choosing the parent's
+        # nextItem.
+        if nextItem is None:
+            try:
+                nextItem = currentItem.parentItem().nextItem()
+            except AttributeError:
+                # parentItem returned None, so nextItem() can't be called
+                nextItem = None
+        if nextItem is None:
+            # if no next item on parent-level, then no change...
+            nextItem = currentItem
+
+        self.currentSelectedItem = nextItem
+        
+        return # DEBUG
+        
         # calculate number of chunks to move/scroll by
         if self.selectedChunkIndex != len(self.chunkList)-1:
             currentChunk = self.chunkList[self.selectedChunkIndex]
@@ -510,36 +578,71 @@ class CursesChunkSelector(object):
             self.scroll(chunksToSkip)
         elif (self.selectedChunkIndex < self.lastChunkToDisplay):
             self.selectedChunkIndex += chunksToSkip
-    
-    def toggleApply(self, chunkIndex):
-        "Toggle the applied flag of the specified chunk with index chunkIndex"
-        chunk = self.chunkList[chunkIndex]
-        chunk.applied = not chunk.applied
+
+    def rightArrowEvent(self):
+        """
+        Select (if possible) the first of this item's child-items.
         
-        if isinstance(chunk, header):
-            if chunk.applied and not chunk.special():
+        """
+        currentItem = self.currentSelectedItem
+        nextItem = currentItem.firstChild()
+
+        if nextItem is None:
+            # if no next item on parent-level, then no change...
+            nextItem = currentItem
+
+        self.currentSelectedItem = nextItem
+
+    def leftArrowEvent(self):
+        """
+        Select (if possible) the parent of this item.
+        
+        """
+        currentItem = self.currentSelectedItem
+        nextItem = currentItem.parentItem()
+        
+        if nextItem is None:
+            # if no next item on parent-level, then no change...
+            nextItem = currentItem
+
+        self.currentSelectedItem = nextItem
+
+    def toggleApply(self, item=None):
+        """
+        Toggle the applied flag of the specified item.  If no item is specified,
+        toggle the flag of the currently selected item.
+        
+        """
+        if item is None:
+            item = self.currentSelectedItem
+        
+        item.applied = not item.applied
+        
+        if isinstance(item, header):
+            if item.applied and not item.special():
                 # apply all its hunks
-                for hnk in chunk.hunks:
+                for hnk in item.hunks:
                     hnk.applied = True
             else:
                 # un-apply all its hunks
-                for hnk in chunk.hunks:
+                for hnk in item.hunks:
                     hnk.applied = False
-        else: # chunk is a hunk
+        elif isinstance(item, hunk):
             # if all 'sibling' hunks are not-applied
-            if not (True in [hnk.applied for hnk in chunk.header.hunks]) and \
-                                                    not chunk.header.special():
-                chunk.header.applied = False
+            if not (True in [hnk.applied for hnk in item.header.hunks]) and \
+                                                    not item.header.special():
+                item.header.applied = False
             # apply the header if its not applied and we're applying a child hunk
-            if chunk.applied and not chunk.header.applied:
-                chunk.header.applied = True
+            if item.applied and not item.header.applied:
+                item.header.applied = True
     
-    def toggleFolded(self, chunkIndex):
-        "Toggle the folded flag of the specified chunk with index chunkIndex"
-        chunk = self.chunkList[chunkIndex]
+    def toggleFolded(self, item=None):
+        "Toggle folded flag of specified item (defaults to currently selected)"
+        if item is None:
+            item = self.currentSelectedItem
         
-        if isinstance(chunk, header):
-            chunk.folded = not chunk.folded
+        if isinstance(item, (header, hunk)):
+            item.folded = not item.folded
         
 
     def alignString(self, inStr):
@@ -664,7 +767,7 @@ class CursesChunkSelector(object):
         
         return checkBox
 
-    def printHeader(self, header):
+    def printHeader(self, header, selected=False):
         text = header.prettyStr()
         chunkIndex = self.chunkList.index(header)
         checkBox = self.getStatusPrefixString(header)
@@ -673,7 +776,8 @@ class CursesChunkSelector(object):
             # add separating line before headers
             self.chunkwin.addstr('_'*self.xScreenSize)
         # select color-pair based on if the header is selected
-        if chunkIndex == self.selectedChunkIndex:
+        #if chunkIndex == self.selectedChunkIndex:
+        if selected:
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         else:
             colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
@@ -687,10 +791,14 @@ class CursesChunkSelector(object):
                 lineStr = "     " + line
                 self.chunkwin.addstr(self.alignString(lineStr), colorPair)
     
-    def printHunkLinesBefore(self, hunk):
+    def printHunkLinesBefore(self, hunk, selected=False):
         "includes start/end line indicator"
+        if selected:
+            colorPair = self.getColorPair(name="selected")
+        else:
+            colorPair = self.getColorPair(name="normal")
         frToLine = hunk.getFromToLine().strip("\n")
-        self.chunkwin.addstr(self.alignString(frToLine))
+        self.chunkwin.addstr(self.alignString(frToLine), colorPair)
         #contextLinesBefore = ''.join(hunk.before)
         #self.chunkwin.addstr(self.alignString(contextLinesBefore))
         for line in hunk.before:
@@ -700,13 +808,15 @@ class CursesChunkSelector(object):
         for line in hunk.after:
             self.chunkwin.addstr(self.alignString(line.strip("\n")))
         
-    def printHunkChangedLine(self, hunkLine):
+    def printHunkChangedLine(self, hunkLine, selected=False):
         # select color-pair based on whether line is an addition/removal
         #if chunkIndex == self.selectedChunkIndex:
         #    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         #else:
         lineStr = hunkLine.prettyStr().strip("\n")
-        if lineStr.startswith("+"):
+        if selected:
+            colorPair = self.getColorPair(name="selected")
+        elif lineStr.startswith("+"):
             colorPair = self.getColorPair(name="addition")
         elif lineStr.startswith("-"):
             colorPair = self.getColorPair(name="deletion")
@@ -715,23 +825,24 @@ class CursesChunkSelector(object):
     
     def printItem(self, item):
         "Recursive method for printing out patch/header/hunk/hunk-line data to screen"
+        selected = (item is self.currentSelectedItem)
         # Patch object is a list of headers
         if isinstance(item, Patch):
             for hdr in item:
                 self.printItem(hdr)
         if isinstance(item, header):
-            self.printHeader(item)
+            self.printHeader(item, selected)
             for hnk in item.hunks:
                 self.printItem(hnk)
         elif isinstance(item, hunk):
             # print the hunk data which comes before the changed-lines
-            self.printHunkLinesBefore(item)
+            self.printHunkLinesBefore(item, selected)
             # unfortunate naming - 'hunk' is a list of HunkLine objects
             for line in item.changedLines:
                 self.printItem(line)
             self.printHunkLinesAfter(item)
         elif isinstance(item, HunkLine):
-            self.printHunkChangedLine(item)
+            self.printHunkChangedLine(item, selected)
     
     
     def sigwinchHandler(self, n, frame):
@@ -816,6 +927,8 @@ class CursesChunkSelector(object):
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(2,0,0,0)
         self.chunkwin = curses.newwin(0,0,2, 0)
+        
+        #import rpdb2; rpdb2.start_embedded_debugger("secret")
 
         while True:
             self.updateScreen()
@@ -826,14 +939,18 @@ class CursesChunkSelector(object):
             elif keyPressed in [ord("j"), 258]: # 258==down arrow
                 self.downArrowEvent()
                 #self.scroll(1)
+            elif keyPressed in [ord("l"), 258]: # ==right arrow
+                self.rightArrowEvent()
+            elif keyPressed in [ord("h"), 258]: # ==left arrow
+                self.leftArrowEvent()
             elif keyPressed in [ord("q")]:
                 raise util.Abort(_('user quit'))
             elif keyPressed in [ord("c")]:
                 break
             elif keyPressed in [32]: # 32 == space
-                self.toggleApply(self.selectedChunkIndex)
+                self.toggleApply()
             elif keyPressed in [ord("f")]: 
-                self.toggleFolded(self.selectedChunkIndex)
+                self.toggleFolded()
 
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit
