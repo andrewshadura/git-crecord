@@ -492,6 +492,11 @@ class CursesChunkSelector(object):
         
         # the currently selected header, hunk, or hunk-line
         self.currentSelectedItem = self.headerList[0]
+        
+        # define indentation levels
+        self.headerIndentNumChars = 0
+        self.hunkIndentNumChars = 3
+        self.hunkLineIndentNumChars = 6
     
     def scroll(self, numHunks):
         """
@@ -770,7 +775,6 @@ class CursesChunkSelector(object):
     def printHeader(self, header, selected=False):
         text = header.prettyStr()
         chunkIndex = self.chunkList.index(header)
-        checkBox = self.getStatusPrefixString(header)
         
         if chunkIndex != 0:
             # add separating line before headers
@@ -783,36 +787,61 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
 
         # print out each line of the chunk, expanding it to screen width
+        
+        # number of characters to indent lines on this level by
+        indentNumChars = 0
+        checkBox = self.getStatusPrefixString(header)
         textList = text.split("\n")
         lineStr = checkBox + textList[0]
         self.chunkwin.addstr(self.alignString(lineStr), colorPair)
         if len(textList) > 1:
             for line in textList[1:]:
-                lineStr = "     " + line
+                lineStr = " "*(indentNumChars + len(checkBox)) + line
                 self.chunkwin.addstr(self.alignString(lineStr), colorPair)
     
     def printHunkLinesBefore(self, hunk, selected=False):
         "includes start/end line indicator"
+
+        # where hunk is in list of siblings
+        hunkIndex = hunk.header.hunks.index(hunk)
+        
+        if hunkIndex != 0:
+            # add separating line before headers
+            self.chunkwin.addstr(' '*self.xScreenSize)
+
         if selected:
-            colorPair = self.getColorPair(name="selected")
+            colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         else:
-            colorPair = self.getColorPair(name="normal")
-        frToLine = hunk.getFromToLine().strip("\n")
+            colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
+            
+        # print out from-to line with checkbox
+        checkBox = self.getStatusPrefixString(hunk)
+        
+        frToLine = " "*self.hunkIndentNumChars + checkBox + \
+                   "   " + hunk.getFromToLine().strip("\n")
         self.chunkwin.addstr(self.alignString(frToLine), colorPair)
-        #contextLinesBefore = ''.join(hunk.before)
-        #self.chunkwin.addstr(self.alignString(contextLinesBefore))
+
+        # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
-            self.chunkwin.addstr(self.alignString(line.strip("\n")))
+            lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
+            self.chunkwin.addstr(self.alignString(lineStr)) # normal colorscheme
         
     def printHunkLinesAfter(self, hunk):
+        indentNumChars = self.hunkLineIndentNumChars
+        # a bit superfluous, but to avoid hard-coding indent amount
+        checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
-            self.chunkwin.addstr(self.alignString(line.strip("\n")))
+            lineStr = " "*(indentNumChars + len(checkBox)) + line.strip("\n")
+            self.chunkwin.addstr(self.alignString(lineStr))
         
     def printHunkChangedLine(self, hunkLine, selected=False):
         # select color-pair based on whether line is an addition/removal
         #if chunkIndex == self.selectedChunkIndex:
         #    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         #else:
+        indentNumChars = self.hunkLineIndentNumChars
+        checkBox = self.getStatusPrefixString(hunkLine)
+        
         lineStr = hunkLine.prettyStr().strip("\n")
         if selected:
             colorPair = self.getColorPair(name="selected")
@@ -821,6 +850,8 @@ class CursesChunkSelector(object):
         elif lineStr.startswith("-"):
             colorPair = self.getColorPair(name="deletion")
         
+        linePrefix = " "*indentNumChars + checkBox
+        self.chunkwin.addstr(linePrefix) # add uncolored checkbox/indent
         self.chunkwin.addstr(self.alignString(lineStr), colorPair)
     
     def printItem(self, item):
