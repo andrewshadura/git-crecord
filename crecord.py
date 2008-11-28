@@ -772,18 +772,41 @@ class CursesChunkSelector(object):
                 # apply all its hunks
                 for hnk in item.hunks:
                     hnk.applied = True
+                    # apply all their HunkLines
+                    for hunkLine in hnk.changedLines:
+                        hunkLine.applied = True
             else:
                 # un-apply all its hunks
                 for hnk in item.hunks:
                     hnk.applied = False
+                    # un-apply all their HunkLines
+                    for hunkLine in hnk.changedLines:
+                        hunkLine.applied = False
         elif isinstance(item, hunk):
+            # apply all it's HunkLines
+            for hunkLine in item.changedLines:
+                hunkLine.applied = item.applied
             # if all 'sibling' hunks are not-applied
             if not (True in [hnk.applied for hnk in item.header.hunks]) and \
                                                     not item.header.special():
                 item.header.applied = False
-            # apply the header if its not applied and we're applying a child hunk
+            # apply the header if it's not applied and we're applying a child hunk
             if item.applied and not item.header.applied:
                 item.header.applied = True
+        elif isinstance(item, HunkLine):
+            # if all 'sibling' lines are not-applied
+            if not (True in [hnkln.applied for hnkln in item.hunk.changedLines]):
+                item.hunk.applied = False
+            # apply the hunk if it's not applied and we're applying a child line
+            if item.applied and not item.hunk.applied:
+                item.hunk.applied = True
+            # if all parent hunks are not applied, un-apply header
+            if not (True in [hnk.applied for hnk in item.hunk.header.hunks]) and \
+                                                    not item.hunk.header.special():
+                item.hunk.header.applied = False
+            # apply the header if it's not applied and we're applying a child hunk
+            if item.hunk.applied and not item.hunk.header.applied:
+                item.hunk.header.applied = True
     
     def toggleFolded(self, item=None):
         "Toggle folded flag of specified item (defaults to currently selected)"
