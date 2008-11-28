@@ -68,7 +68,109 @@ def scanpatch(fp):
             else:
                 raise patch.PatchError('unknown patch content: %r' % line)
 
-class Patch(list):
+class PatchNode(object):
+    "Abstract Class for Patch Graph Nodes (i.e. PatchRoot, header, hunk, HunkLine)"
+    
+    def firstChild(self):
+        raise NotImplementedError("method must be implemented by subclass")
+
+    def lastChild(self):
+        raise NotImplementedError("method must be implemented by subclass")
+
+    def nextSibling(self):
+        """
+        Return the closest next item of the same type where there are no items
+        of different types between the current item and this closest item.
+        If no such item exists, return None.
+        
+        """
+        raise NotImplementedError("method must be implemented by subclass")
+
+    def prevSibling(self):
+        """
+        Return the closest previous item of the same type where there are no
+        items of different types between the current item and this closest item.
+        If no such item exists, return None.
+        
+        """
+        raise NotImplementedError("method must be implemented by subclass")
+
+    def parentItem(self):
+        raise NotImplementedError("method must be implemented by subclass")
+    
+    
+    def nextItem(self, constrainLevel=True):
+        """
+        If constrainLevel == True, return the closest next item
+        of the same type where there are no items of different types between
+        the current item and this closest item.
+        
+        If constrainLevel == False, then try to return the next item
+        closest to this item, regardless of item's type (header, hunk, or
+        HunkLine).
+        
+        If it is not possible to get the next item, return None.
+        
+        """
+        if constrainLevel:
+            return self.nextSibling()
+        else:
+            # try child
+            item = self.firstChild()
+            if item is not None:
+                return item
+            
+            # else try next sibling
+            item = self.nextSibling()
+            if item is not None:
+                return item
+            
+            try:
+                # else try parent's next sibling
+                item = self.parentItem().nextSibling()
+                if item is not None:
+                    return item
+                
+                # else return grandparent's next sibling (or None)
+                return self.parentItem().parentItem().nextSibling()
+
+            except AttributeError: # parent and/or grandparent was None
+                return None
+
+    def prevItem(self, constrainLevel=True):
+        """
+        If constrainLevel == True, return the closest previous item
+        of the same type where there are no items of different types between
+        the current item and this closest item.
+        
+        If constrainLevel == False, then try to return the previous item
+        closest to this item, regardless of item's type (header, hunk, or
+        HunkLine).
+        
+        If it is not possible to get the previous item, return None.
+        
+        """
+        if constrainLevel:
+            return self.prevSibling()
+        else:
+            # try previous sibling's last child's last child,
+            # else try previous sibling's last child, else try previous sibling
+            prevSibling = self.prevSibling()
+            if prevSibling is not None:
+                prevSiblingLastChild = prevSibling.lastChild()
+                if prevSiblingLastChild is not None:
+                    prevSiblingLCLC = prevSiblingLastChild.lastChild()
+                    if prevSiblingLCLC is not None:
+                        return prevSiblingLCLC
+                    else:
+                        return prevSiblingLastChild
+                else:
+                    return prevSibling
+            
+            # try parent (or None)
+            return self.parentItem()
+
+class Patch(PatchNode, list): # TODO: rename PatchRoot
     """
     List of header objects representing the patch.
     
@@ -79,7 +181,7 @@ class Patch(list):
         for header in self:
             header.patch = self
 
-class header(object):
+class header(PatchNode):
     """patch header
 
     XXX shoudn't we move this to mercurial/patch.py ?
@@ -164,29 +266,22 @@ class header(object):
         for h in self.header:
             if self.special_re.match(h):
                 return True
-    
-    def nextItem(self):
-        """
-        Return a reference to the next header in the patch.  If there is no
-        next header, return None.
-        
-        """
+
+    def nextSibling(self):
         numHeadersInPatch = len(self.patch)
         indexOfThisHeader = self.patch.index(self)
+        
         if indexOfThisHeader < numHeadersInPatch - 1:
-            return self.patch[indexOfThisHeader + 1]
+            nextHeader = self.patch[indexOfThisHeader + 1]
+            return nextHeader
         else:
             return None
 
-    def prevItem(self):
-        """
-        Return a reference to the previous header in the patch.  If there is no
-        previous header, return None.
-        
-        """
+    def prevSibling(self):
         indexOfThisHeader = self.patch.index(self)
         if indexOfThisHeader > 0:
-            return self.patch[indexOfThisHeader - 1]
+            previousHeader = self.patch[indexOfThisHeader - 1]
+            return previousHeader
         else:
             return None
 
@@ -204,7 +299,14 @@ class header(object):
         else:
             return None
 
-class HunkLine(object):
+    def lastChild(self):
+        "Return the last child of this item, if one exists.  Otherwise None."
+        if len(self.hunks) > 0:
+            return self.hunks[-1]
+        else:
+            return None
+
+class HunkLine(PatchNode):
     "Represents a changed line in a hunk"
     def __init__(self, lineText, hunk):
         self.lineText = lineText
@@ -214,32 +316,25 @@ class HunkLine(object):
     
     def prettyStr(self):
         return self.lineText
-    
-    def nextItem(self):
-        """
-        Return a reference to the next changed line belonging to the same hunk
-        as this line.  If there is no next line, return None.
-        
-        """
+
+    def nextSibling(self):
         numLinesInHunk = len(self.hunk.changedLines)
         indexOfThisLine = self.hunk.changedLines.index(self)
-        if indexOfThisLine < numLinesInHunk - 1:
-            return self.hunk.changedLines[indexOfThisLine + 1]
+        
+        if (indexOfThisLine < numLinesInHunk - 1):
+            nextLine = self.hunk.changedLines[indexOfThisLine + 1]
+            return nextLine
         else:
             return None
-
-    def prevItem(self):
-        """
-        Return a reference to the previous changed line belonging to the same hunk
-        as this line.  If there is no previous line, return None.
-        
-        """
+    
+    def prevSibling(self):
         indexOfThisLine = self.hunk.changedLines.index(self)
         if indexOfThisLine > 0:
-            return self.hunk.changedLines[indexOfThisLine - 1]
+            previousLine = self.hunk.changedLines[indexOfThisLine - 1]
+            return previousLine
         else:
             return None
-        
+    
     def parentItem(self):
         "Return the parent to the current item"
         return self.hunk
@@ -249,7 +344,12 @@ class HunkLine(object):
         # hunk-lines don't have children
         return None
 
-class hunk(object):
+    def lastChild(self):
+        "Return the last child of this item, if one exists.  Otherwise None."
+        # hunk-lines don't have children
+        return None
+
+class hunk(PatchNode):
     """patch hunk
 
     XXX shouldn't we merge this with patch.hunk ?
@@ -274,28 +374,21 @@ class hunk(object):
         # flag to indicate whether to apply this chunk
         self.applied = True
 
-    def nextItem(self):
-        """
-        Return a reference to the next hunk belonging to the same header as
-        this hunk.  If there is no next hunk, return None.
-        
-        """
+    def nextSibling(self):
         numHunksInHeader = len(self.header.hunks)
         indexOfThisHunk = self.header.hunks.index(self)
-        if indexOfThisHunk < numHunksInHeader - 1:
-            return self.header.hunks[indexOfThisHunk + 1]
+
+        if (indexOfThisHunk < numHunksInHeader - 1):
+            nextHunk = self.header.hunks[indexOfThisHunk + 1]
+            return nextHunk
         else:
             return None
 
-    def prevItem(self):
-        """
-        Return a reference to the previous hunk belonging to the same header as
-        this hunk.  If there is no previous hunk, return None.
-        
-        """
+    def prevSibling(self):
         indexOfThisHunk = self.header.hunks.index(self)
         if indexOfThisHunk > 0:
-            return self.header.hunks[indexOfThisHunk - 1]
+            previousHunk = self.header.hunks[indexOfThisHunk - 1]
+            return previousHunk
         else:
             return None
 
@@ -307,6 +400,13 @@ class hunk(object):
         "Return the first child of this item, if one exists.  Otherwise None."
         if len(self.changedLines) > 0:
             return self.changedLines[0]
+        else:
+            return None
+
+    def lastChild(self):
+        "Return the last child of this item, if one exists.  Otherwise None."
+        if len(self.changedLines) > 0:
+            return self.changedLines[-1]
         else:
             return None
     
@@ -507,8 +607,31 @@ class CursesChunkSelector(object):
         self.firstChunkToDisplay += numHunks
         self.firstChunkToDisplay = min(self.firstChunkToDisplay, len(self.chunkList)-1) 
         self.firstChunkToDisplay = max(self.firstChunkToDisplay, 0)
-    
+  
     def upArrowEvent(self):
+        """
+        Try to select the previous item to the current item that has the
+        most-indented level.  For example, if a hunk is selected, try to select
+        the last HunkLine of the hunk prior to the selected hunk.  Or, if
+        the first HunkLine of a hunk is currently selected, then select the
+        hunk itself.
+        
+        If the currently selected item is already at the top of the screen, 
+        scroll the screen down to show the new-selected item.
+        
+        """
+        currentItem = self.currentSelectedItem
+        
+        nextItem = currentItem.prevItem(constrainLevel=False)
+        
+        if nextItem is None:
+            # if no parent item (i.e. currentItem is the first header), then
+            # no change...
+            nextItem = currentItem
+        
+        self.currentSelectedItem = nextItem
+    
+    def upArrowShiftEvent(self):
         """
         Select (if possible) the previous item on the same level as the currently
         selected item.  Otherwise, select (if possible) the parent-item of the
@@ -545,6 +668,27 @@ class CursesChunkSelector(object):
             self.selectedChunkIndex -= chunksToSkip
 
     def downArrowEvent(self):
+        """
+        Try to select the next item to the current item that has the
+        most-indented level.  For example, if a hunk is selected, select
+        the first HunkLine of the selected hunk.  Or, if the last HunkLine of
+        a hunk is currently selected, then select the next hunk, if one exists,
+        or if not, the next header if one exists.
+        
+        If the currently selected item is already at the bottom of the screen, 
+        scroll the screen up to show the new-selected item.
+        
+        """
+        currentItem = self.currentSelectedItem
+        
+        nextItem = currentItem.nextItem(constrainLevel=False)
+        # if there's no next item, keep the selection as-is
+        if nextItem is None:
+            nextItem = currentItem
+        
+        self.currentSelectedItem = nextItem
+
+    def downArrowShiftEvent(self):
         """
         If the cursor is already at the bottom chunk, scroll the screen up and move the cursor-position
         to the subsequent chunk.  Otherwise, only move the cursor position down one chunk.
@@ -966,13 +1110,11 @@ class CursesChunkSelector(object):
             self.lastKeyPressed = keyPressed = stdscr.getch()
             if keyPressed in [ord("k"), 259]: # 259==up arrow
                 self.upArrowEvent()
-                #self.scroll(-1)
             elif keyPressed in [ord("j"), 258]: # 258==down arrow
                 self.downArrowEvent()
-                #self.scroll(1)
-            elif keyPressed in [ord("l"), 258]: # ==right arrow
+            elif keyPressed in [ord("l"), 261]: # ==right arrow
                 self.rightArrowEvent()
-            elif keyPressed in [ord("h"), 258]: # ==left arrow
+            elif keyPressed in [ord("h"), 260]: # ==left arrow
                 self.leftArrowEvent()
             elif keyPressed in [ord("q")]:
                 raise util.Abort(_('user quit'))
