@@ -99,7 +99,7 @@ class PatchNode(object):
         raise NotImplementedError("method must be implemented by subclass")
     
     
-    def nextItem(self, constrainLevel=True):
+    def nextItem(self, constrainLevel=True, skipFolded=True):
         """
         If constrainLevel == True, return the closest next item
         of the same type where there are no items of different types between
@@ -109,11 +109,27 @@ class PatchNode(object):
         closest to this item, regardless of item's type (header, hunk, or
         HunkLine).
         
+        If skipFolded == True, and the current item is folded, then the child
+        items that are hidden due to folding will be skipped when determining
+        the next item.
+        
         If it is not possible to get the next item, return None.
         
         """
+        try:
+            itemFolded = self.folded
+        except AttributeError:
+            itemFolded = False
         if constrainLevel:
             return self.nextSibling()
+        elif skipFolded and itemFolded:
+            nextItem = self.nextSibling()
+            if nextItem is None:
+                try:
+                    nextItem = self.parentItem().nextSibling()
+                except AttributeError:
+                    nextItem = None
+            return nextItem
         else:
             # try child
             item = self.firstChild()
@@ -137,7 +153,7 @@ class PatchNode(object):
             except AttributeError: # parent and/or grandparent was None
                 return None
 
-    def prevItem(self, constrainLevel=True):
+    def prevItem(self, constrainLevel=True, skipFolded=True):
         """
         If constrainLevel == True, return the closest previous item
         of the same type where there are no items of different types between
@@ -146,7 +162,11 @@ class PatchNode(object):
         If constrainLevel == False, then try to return the previous item
         closest to this item, regardless of item's type (header, hunk, or
         HunkLine).
-        
+
+        If skipFolded == True, and the current item is folded, then the items
+        that are hidden due to folding will be skipped when determining the
+        next item.
+
         If it is not possible to get the previous item, return None.
         
         """
@@ -158,9 +178,9 @@ class PatchNode(object):
             prevSibling = self.prevSibling()
             if prevSibling is not None:
                 prevSiblingLastChild = prevSibling.lastChild()
-                if prevSiblingLastChild is not None:
+                if (prevSiblingLastChild is not None) and not prevSibling.folded:
                     prevSiblingLCLC = prevSiblingLastChild.lastChild()
-                    if prevSiblingLCLC is not None:
+                    if (prevSiblingLCLC is not None) and not prevSiblingLastChild.folded:
                         return prevSiblingLCLC
                     else:
                         return prevSiblingLastChild
@@ -313,6 +333,9 @@ class HunkLine(PatchNode):
         self.applied = True
         # the parent hunk to which this line belongs
         self.hunk = hunk
+        # folding lines currently is not used/needed, but this flag is needed
+        # in the prevItem method.
+        self.folded = False
     
     def prettyStr(self):
         return self.lineText
@@ -370,7 +393,9 @@ class hunk(PatchNode):
         self.hunk = hunk
         self.changedLines = [HunkLine(line, self) for line in hunk]
         self.added, self.removed = self.countchanges(self.hunk)
-        
+
+        # flag to indicate whether to display as folded/unfolded to user
+        self.folded = False
         # flag to indicate whether to apply this chunk
         self.applied = True
 
@@ -968,7 +993,6 @@ class CursesChunkSelector(object):
     
     def printHunkLinesBefore(self, hunk, selected=False):
         "includes start/end line indicator"
-
         # where hunk is in list of siblings
         hunkIndex = hunk.header.hunks.index(hunk)
         
@@ -988,12 +1012,18 @@ class CursesChunkSelector(object):
                    "   " + hunk.getFromToLine().strip("\n")
         self.chunkwin.addstr(self.alignString(frToLine), colorPair)
 
+        if hunk.folded:
+            # skip remainder of output
+            return
+        
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
             lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
             self.chunkwin.addstr(self.alignString(lineStr)) # normal colorscheme
         
     def printHunkLinesAfter(self, hunk):
+        if hunk.folded:
+            return
         indentNumChars = self.hunkLineIndentNumChars
         # a bit superfluous, but to avoid hard-coding indent amount
         checkBox = self.getStatusPrefixString(hunk)
@@ -1032,14 +1062,13 @@ class CursesChunkSelector(object):
             self.printHeader(item, selected)
             for hnk in item.hunks:
                 self.printItem(hnk)
-        elif isinstance(item, hunk):
+        elif isinstance(item, hunk) and not item.header.folded:
             # print the hunk data which comes before the changed-lines
             self.printHunkLinesBefore(item, selected)
-            # unfortunate naming - 'hunk' is a list of HunkLine objects
             for line in item.changedLines:
                 self.printItem(line)
             self.printHunkLinesAfter(item)
-        elif isinstance(item, HunkLine):
+        elif isinstance(item, HunkLine) and not item.hunk.folded:
             self.printHunkChangedLine(item, selected)
     
     
