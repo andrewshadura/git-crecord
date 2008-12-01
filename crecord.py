@@ -1159,7 +1159,7 @@ class CursesChunkSelector(object):
             self.statuswin = curses.newwin(self.numStatusLines,self.xScreenSize,0,0)
         except curses.error:
             pass
-            # TODO: make resizing to a smaller width work
+            # TODO: make resizing to a smaller width work (also for help screen)
             # re-calculate an upper-bound on the number of lines in the pad
             #self.numPadLines = self.getNumLinesDisplayed()
             #self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
@@ -1214,7 +1214,38 @@ class CursesChunkSelector(object):
     def initColorPair(self, *args, **kwargs):
         "Same as getColorPair."
         self.getColorPair(*args, **kwargs)    
-    
+
+    def helpWindow(self):
+        "Print a help window to the screen.  Exit after any keypress."
+        helpText = """HELP  [press any key to return to the patch-display]
+
+crecord allows you to interactively choose among the changes you have made,
+and commit only those changes you select.  After committing the selected
+changes, the unselected changes are still present in your working copy, so you
+can use crecord multiple times to split large changes into smaller changesets.
+The following are valid keystrokes:
+
+                [SPACE] : toggle selection of an item ([X] means selected)
+    Up/Down-arrow [k/j] : go to previous/next unfolded item
+        PgUp/PgDn [K/J] : go to previous/next item of same type
+ Right/Left-arrow [l/h] : go to child item / parent item
+                      f : fold / unfold item, hiding/revealing its children
+                      F : fold parent item
+                      c : commit selected changes
+                      q : quit without committing (no changes will be made)
+                      ? : help (what you're currently reading)"""
+        
+        helpwin = curses.newwin(self.yScreenSize,0,0,0)
+        helpLines = helpText.split("\n")
+        helpLines = helpLines + [" "]*(self.yScreenSize-self.numStatusLines-len(helpLines)-1)
+        try:
+            for line in helpLines:
+                self.printString(helpwin, self.alignString(line), pairName="legend")
+        except curses.error:
+            pass
+        helpwin.refresh()
+        self.stdscr.getch()
+
     def main(self, stdscr):
         """
         Method to be wrapped by curses.wrapper() for selecting chunks.
@@ -1271,6 +1302,8 @@ class CursesChunkSelector(object):
                 self.toggleApply()
             elif keyPressed in [ord("f")]: 
                 self.toggleFolded()
+            elif keyPressed in [ord("?")]: 
+                self.helpWindow()
 
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit
