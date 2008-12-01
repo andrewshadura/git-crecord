@@ -1251,19 +1251,23 @@ class CursesChunkSelector(object):
         while True:
             self.updateScreen()
             self.lastKeyPressed = keyPressed = stdscr.getch()
-            if keyPressed in [ord("k"), 259]: # 259==up arrow
+            if keyPressed in [ord("k"), curses.KEY_UP]:
                 self.upArrowEvent()
-            elif keyPressed in [ord("j"), 258]: # 258==down arrow
+            if keyPressed in [ord("K"), curses.KEY_PPAGE]:
+                self.upArrowShiftEvent()
+            elif keyPressed in [ord("j"), curses.KEY_DOWN]:
                 self.downArrowEvent()
-            elif keyPressed in [ord("l"), 261]: # ==right arrow
+            elif keyPressed in [ord("J"), curses.KEY_NPAGE]:
+                self.downArrowShiftEvent()
+            elif keyPressed in [ord("l"), curses.KEY_RIGHT]:
                 self.rightArrowEvent()
-            elif keyPressed in [ord("h"), 260]: # ==left arrow
+            elif keyPressed in [ord("h"), curses.KEY_LEFT]:
                 self.leftArrowEvent()
             elif keyPressed in [ord("q")]:
                 raise util.Abort(_('user quit'))
             elif keyPressed in [ord("c")]:
                 break
-            elif keyPressed in [32]: # 32 == space
+            elif keyPressed in [ord(' ')]:
                 self.toggleApply()
             elif keyPressed in [ord("f")]: 
                 self.toggleFolded()
