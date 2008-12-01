@@ -603,12 +603,6 @@ class CursesChunkSelector(object):
             self.chunkList.append(h)
             self.chunkList.extend(h.hunks)
         
-        self.firstChunkToDisplay = 0
-        
-        # really, a 'last chunk that was displayed' variable
-        self.lastChunkToDisplay = None # updated when printing chunks to current display 
-        self.selectedChunkIndex = 0
-        #self.lastKeyPressed = ""
         # dictionary mapping (fgColor,bgColor) pairs to the corresponding curses
         # color-pair value.
         self.colorPairs = {}
@@ -618,21 +612,31 @@ class CursesChunkSelector(object):
         # the currently selected header, hunk, or hunk-line
         self.currentSelectedItem = self.headerList[0]
         
+        # updated when printing out patch-display -- the 'lines' here are the
+        # line positions *in the pad*, not on the screen.
+        self.selectedItemStartLine = 0
+        self.selectedItemEndLine = None
+        
         # define indentation levels
         self.headerIndentNumChars = 0
         self.hunkIndentNumChars = 3
         self.hunkLineIndentNumChars = 6
-    
-    def scroll(self, numHunks):
-        """
-        numHunks > 0 causes the screen to scroll up (like pressing page-down key).  numHunks < 0
-        does the reverse.
         
-        """
-        self.firstChunkToDisplay += numHunks
-        self.firstChunkToDisplay = min(self.firstChunkToDisplay, len(self.chunkList)-1) 
-        self.firstChunkToDisplay = max(self.firstChunkToDisplay, 0)
-  
+        # the first line of the pad to print to the screen
+        self.firstLineOfPadToPrint = 0
+        
+        # keeps track of the number of lines in the pad
+        self.numPadLines = None
+        
+        self.numStatusLines = 2
+                
+        # keep a running count of the number of lines printed to the pad
+        # (used for determining when the selected item begins/ends)
+        self.linesPrintedToPadSoFar = 0
+        
+        # the first line of the pad which is visible on the screen
+        self.firstLineOfPadToPrint = 0
+    
     def upArrowEvent(self):
         """
         Try to select the previous item to the current item that has the
@@ -677,20 +681,6 @@ class CursesChunkSelector(object):
             nextItem = currentItem
         
         self.currentSelectedItem = nextItem
-        
-        return # DEBUG
-        # calculate number of chunks to move/scroll by
-        if self.selectedChunkIndex != 0:
-            preceedingChunk = self.chunkList[self.selectedChunkIndex-1]
-            if isinstance(preceedingChunk, hunk) and preceedingChunk.header.folded:
-                chunksToSkip = len(preceedingChunk.header.hunks) + 1
-            else:
-                chunksToSkip = 1
-        if (self.selectedChunkIndex == self.firstChunkToDisplay) and self.selectedChunkIndex > 0:
-            self.selectedChunkIndex -= chunksToSkip
-            self.scroll(-chunksToSkip)
-        elif (self.selectedChunkIndex > self.firstChunkToDisplay):
-            self.selectedChunkIndex -= chunksToSkip
 
     def downArrowEvent(self):
         """
@@ -704,6 +694,7 @@ class CursesChunkSelector(object):
         scroll the screen up to show the new-selected item.
         
         """
+        #self.startPrintLine += 1 #DEBUG
         currentItem = self.currentSelectedItem
         
         nextItem = currentItem.nextItem(constrainLevel=False)
@@ -736,22 +727,6 @@ class CursesChunkSelector(object):
             nextItem = currentItem
 
         self.currentSelectedItem = nextItem
-        
-        return # DEBUG
-        
-        # calculate number of chunks to move/scroll by
-        if self.selectedChunkIndex != len(self.chunkList)-1:
-            currentChunk = self.chunkList[self.selectedChunkIndex]
-            if isinstance(currentChunk, header) and currentChunk.folded:
-                chunksToSkip = len(currentChunk.hunks) + 1
-            else:
-                chunksToSkip = 1
-        
-        if (self.selectedChunkIndex >= self.lastChunkToDisplay) and self.selectedChunkIndex < len(self.chunkList)-1:
-            self.selectedChunkIndex += chunksToSkip
-            self.scroll(chunksToSkip)
-        elif (self.selectedChunkIndex < self.lastChunkToDisplay):
-            self.selectedChunkIndex += chunksToSkip
 
     def rightArrowEvent(self):
         """
@@ -760,7 +735,11 @@ class CursesChunkSelector(object):
         """
         currentItem = self.currentSelectedItem
         nextItem = currentItem.firstChild()
-
+        
+        # turn off folding if we want to show a child-item
+        if currentItem.folded:
+            currentItem.folded = False
+        
         if nextItem is None:
             # if no next item on parent-level, then no change...
             nextItem = currentItem
@@ -780,6 +759,28 @@ class CursesChunkSelector(object):
             nextItem = currentItem
 
         self.currentSelectedItem = nextItem
+
+    def updateScroll(self):
+        "Scroll the screen in such a way to fully show the currently-selected item."
+        selStart = self.selectedItemStartLine
+        selEnd = self.selectedItemEndLine
+        padStart = self.firstLineOfPadToPrint
+        padEnd = padStart + self.yScreenSize - self.numStatusLines - 1
+        
+        if selEnd > padEnd:
+            self.scrollLines(selEnd - padEnd)
+        elif selStart < padStart:
+            # negative values scroll in pgup direction
+            self.scrollLines(selStart - padStart)
+        
+
+    def scrollLines(self, numLines):
+        "Scroll the screen up (down) by numLines when numLines >0 (<0)."
+        self.firstLineOfPadToPrint += numLines
+        if self.firstLineOfPadToPrint < 0:
+            self.firstLineOfPadToPrint = 0
+        if self.firstLineOfPadToPrint > self.numPadLines-1:
+            self.firstLineOfPadToPrint = self.numPadLines-1
 
     def toggleApply(self, item=None):
         """
@@ -850,11 +851,13 @@ class CursesChunkSelector(object):
         multiple lines.
         
         """
-        y,xStart = self.chunkwin.getyx()
+        y,xStart = self.chunkpad.getyx()
         width = self.xScreenSize
-        return inStr + " " * (width - (len(inStr) % width) - xStart)
+        strLen = len(inStr)
+        numSpaces = (width - ((strLen + xStart) % width))
+        return inStr + " " * numSpaces
 
-    def printString(self, window, text, fgColor=None, bgColor=None, pairName=None, attrList=None):
+    def printString(self, window, text, fgColor=None, bgColor=None, pair=None, pairName=None, attrList=None, toWin=True):
         """
         Print the string, text, with the specified colors and attributes, to
         the specified curses window object.
@@ -869,7 +872,11 @@ class CursesChunkSelector(object):
         UNDERLINE].
         
         """
-        if pairName is not None:
+        if not toWin: # if we shouldn't print to the window
+            return text
+        if pair is not None:
+            colorPair = pair
+        elif pairName is not None:
             colorPair = self.colorPairNames[pairName]
         else:
             if fgColor is None:
@@ -893,12 +900,21 @@ class CursesChunkSelector(object):
                 if textAttr in attrList:
                     colorPair |= textAttr
                 
+        y,xStart = self.chunkpad.getyx()
+        textlen=len(text) #debug
+        width = self.xScreenSize #debug
+        
+        linesPrinted = (xStart + len(text)) / self.xScreenSize
+        # is reset to 0 at the beginning of printItem()
+        self.linesPrintedToPadSoFar += linesPrinted
+
         window.addstr(text, colorPair)
+        return text
 
 
     def updateScreen(self):
         self.statuswin.erase()
-        self.chunkwin.erase()
+        self.chunkpad.erase()
 
         width = self.xScreenSize
         alignString = self.alignString
@@ -910,36 +926,16 @@ class CursesChunkSelector(object):
             printString(self.statuswin, alignString(" (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded"), pairName="legend")
         except curses.error:
             pass
-
-
+        
         # print out the patch in the remaining part of the window
         try:
-            self.printItem(self.headerList)
+            self.printItem()
+            self.updateScroll()
+            self.chunkpad.refresh(self.firstLineOfPadToPrint,0,self.numStatusLines,0,self.yScreenSize+1-self.numStatusLines,self.xScreenSize)
         except curses.error:
             pass
         
-        self.chunkwin.refresh()
-        self.statuswin.refresh()
-        
-        return #DEBUG
-        
-        skippedChunks = 0
-        for i,c in enumerate(self.chunkList):
-            
-            try:
-                if i >= self.firstChunkToDisplay:
-                    if (isinstance(self.chunkList[i], hunk) and not self.chunkList[i].header.folded) \
-                            or isinstance(self.chunkList[i], header):
-                        printChunk(c)
-                        self.lastChunkToDisplay = i
-                        skippedChunks = 0 # keeps track of chunks not displayed
-                    else:
-                        skippedChunks += 1
-            except curses.error:
-                self.lastChunkToDisplay = i - (skippedChunks + 1)
-                break
-        
-        self.chunkwin.refresh()
+        # refresh([pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol])
         self.statuswin.refresh()
 
     def getStatusPrefixString(self, item):
@@ -964,15 +960,20 @@ class CursesChunkSelector(object):
         
         return checkBox
 
-    def printHeader(self, header, selected=False):
+    def printHeader(self, header, selected=False, countLines=False, toWin=True):
+        """
+        Print the header to the pad.  If countLines is True, don't print
+        anything, but just count the number of lines which would be printed.
+        
+        """
+        outStr = ""
         text = header.prettyStr()
         chunkIndex = self.chunkList.index(header)
         
         if chunkIndex != 0:
             # add separating line before headers
-            self.chunkwin.addstr('_'*self.xScreenSize)
+            outStr += self.printString(self.chunkpad, '_'*self.xScreenSize, toWin=toWin)
         # select color-pair based on if the header is selected
-        #if chunkIndex == self.selectedChunkIndex:
         if selected:
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         else:
@@ -985,20 +986,23 @@ class CursesChunkSelector(object):
         checkBox = self.getStatusPrefixString(header)
         textList = text.split("\n")
         lineStr = checkBox + textList[0]
-        self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+        outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
         if len(textList) > 1:
             for line in textList[1:]:
                 lineStr = " "*(indentNumChars + len(checkBox)) + line
-                self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+                outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+        
+        return outStr
     
-    def printHunkLinesBefore(self, hunk, selected=False):
+    def printHunkLinesBefore(self, hunk, selected=False, toWin=True):
         "includes start/end line indicator"
+        outStr = ""
         # where hunk is in list of siblings
         hunkIndex = hunk.header.hunks.index(hunk)
         
         if hunkIndex != 0:
             # add separating line before headers
-            self.chunkwin.addstr(' '*self.xScreenSize)
+            outStr += self.printString(self.chunkpad, ' '*self.xScreenSize, toWin=toWin)
 
         if selected:
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
@@ -1007,39 +1011,47 @@ class CursesChunkSelector(object):
             
         # print out from-to line with checkbox
         checkBox = self.getStatusPrefixString(hunk)
-        
-        frToLine = " "*self.hunkIndentNumChars + checkBox + \
-                   "   " + hunk.getFromToLine().strip("\n")
-        self.chunkwin.addstr(self.alignString(frToLine), colorPair)
+
+        linePrefix = " "*self.hunkIndentNumChars + checkBox
+        frToLine = "   " + hunk.getFromToLine().strip("\n")
+                
+                
+        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
+        outStr += self.printString(self.chunkpad, self.alignString(frToLine), pair=colorPair, toWin=toWin)
 
         if hunk.folded:
             # skip remainder of output
-            return
+            return outStr
         
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
             lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
-            self.chunkwin.addstr(self.alignString(lineStr)) # normal colorscheme
+            outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
         
-    def printHunkLinesAfter(self, hunk):
+        return outStr
+        
+    def printHunkLinesAfter(self, hunk, toWin=True):
+        outStr = ""
         if hunk.folded:
-            return
+            return outStr
+        
         indentNumChars = self.hunkLineIndentNumChars
         # a bit superfluous, but to avoid hard-coding indent amount
         checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
             lineStr = " "*(indentNumChars + len(checkBox)) + line.strip("\n")
-            self.chunkwin.addstr(self.alignString(lineStr))
+            outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
         
-    def printHunkChangedLine(self, hunkLine, selected=False):
-        # select color-pair based on whether line is an addition/removal
-        #if chunkIndex == self.selectedChunkIndex:
-        #    colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
-        #else:
+        return outStr
+        
+    def printHunkChangedLine(self, hunkLine, selected=False, toWin=True):
+        outStr = ""
         indentNumChars = self.hunkLineIndentNumChars
         checkBox = self.getStatusPrefixString(hunkLine)
         
         lineStr = hunkLine.prettyStr().strip("\n")
+        
+        # select color-pair based on whether line is an addition/removal
         if selected:
             colorPair = self.getColorPair(name="selected")
         elif lineStr.startswith("+"):
@@ -1048,29 +1060,94 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="deletion")
         
         linePrefix = " "*indentNumChars + checkBox
-        self.chunkwin.addstr(linePrefix) # add uncolored checkbox/indent
-        self.chunkwin.addstr(self.alignString(lineStr), colorPair)
+        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
+        outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+        return outStr
+
+    def printItem(self, item=None, ignoreFolding=False, recurseChildren=True, toWin=True):
+        """
+        Use __printItem() to print the the specified item.applied.
+        If item is not specified, then print the entire patch.
+        (hiding folded elements, etc. -- see __printitem() docstring)
+        """
+        if item is None:
+            item = self.headerList
+        if recurseChildren:
+            self.linesPrintedToPadSoFar = 0
+            global outStr
+        retStr = self.__printItem(item, ignoreFolding, recurseChildren, toWin=toWin)
+        if recurseChildren:
+            # remove the string when finished, so it doesn't accumulate
+            del outStr
+        
+        return retStr
     
-    def printItem(self, item):
-        "Recursive method for printing out patch/header/hunk/hunk-line data to screen"
+    def __printItem(self, item, ignoreFolding, recurseChildren, toWin=True):
+        """
+        Recursive method for printing out patch/header/hunk/hunk-line data to
+        screen.  Also returns a string with all of the content of the displayed
+        patch (not including coloring, etc.).
+        
+        If ignoreFolding is True, then folded items are printed out.
+        
+        If recurseChildren is False, then only print the item without its
+        child items.
+        
+        """
+        # keep outStr local, since we're not recursing
+        if recurseChildren:
+            global outStr
+            try:
+                outStr
+            except:
+                outStr = ""
+        else:
+            outStr = ""
+        
         selected = (item is self.currentSelectedItem)
+        if selected and recurseChildren:
+            # assumes line numbering starting from line 0
+            self.selectedItemStartLine = self.linesPrintedToPadSoFar
+            selectedItemLines = self.getNumLinesDisplayed(item, recurseChildren=False)
+            self.selectedItemEndLine = self.selectedItemStartLine + selectedItemLines - 1
+        
         # Patch object is a list of headers
         if isinstance(item, Patch):
-            for hdr in item:
-                self.printItem(hdr)
+            if recurseChildren:
+                for hdr in item:
+                    self.__printItem(hdr, ignoreFolding, recurseChildren, toWin)
         if isinstance(item, header):
-            self.printHeader(item, selected)
-            for hnk in item.hunks:
-                self.printItem(hnk)
-        elif isinstance(item, hunk) and not item.header.folded:
+            outStr += self.printHeader(item, selected, toWin=toWin)
+            if recurseChildren:
+                for hnk in item.hunks:
+                    self.__printItem(hnk, ignoreFolding, recurseChildren, toWin)
+        elif isinstance(item, hunk) and \
+        ((not item.header.folded) or ignoreFolding):
             # print the hunk data which comes before the changed-lines
-            self.printHunkLinesBefore(item, selected)
-            for line in item.changedLines:
-                self.printItem(line)
-            self.printHunkLinesAfter(item)
-        elif isinstance(item, HunkLine) and not item.hunk.folded:
-            self.printHunkChangedLine(item, selected)
-    
+            outStr += self.printHunkLinesBefore(item, selected, toWin=toWin)
+            if recurseChildren:
+                for line in item.changedLines:
+                    self.__printItem(line, ignoreFolding, recurseChildren, toWin)
+                outStr += self.printHunkLinesAfter(item, toWin=toWin)
+        elif isinstance(item, HunkLine) and ((not item.hunk.folded) or ignoreFolding):
+            outStr += self.printHunkChangedLine(item, selected, toWin=toWin)
+
+        return outStr
+
+    def getNumLinesDisplayed(self, item=None, ignoreFolding=True, recurseChildren=True):
+        """
+        Return the number of lines which would be displayed if the item were
+        to be printed to the display.  The item will NOT be printed to the
+        display (pad).
+        If no item is given, assume the entire patch.
+        If ignoreFolding is True, folded items will be unfolded when counting
+        the number of lines.
+        
+        """
+        # temporarily disable printing to windows by printString
+        patchDisplayString = self.printItem(item, ignoreFolding, recurseChildren, toWin=False)
+        numLines = len(patchDisplayString)/self.xScreenSize
+        return numLines
     
     def sigwinchHandler(self, n, frame):
         "Handle window resizing"
@@ -1079,11 +1156,14 @@ class CursesChunkSelector(object):
             self.stdscr = curses.initscr()
             self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
 
-            self.statuswin = curses.newwin(2,self.xScreenSize,0,0)
-            self.chunkwin = curses.newwin(self.yScreenSize-2,self.xScreenSize,2, 0)
-            #curses.resizeterm(...)
+            self.statuswin = curses.newwin(self.numStatusLines,self.xScreenSize,0,0)
         except curses.error:
             pass
+            # TODO: make resizing to a smaller width work
+            # re-calculate an upper-bound on the number of lines in the pad
+            #self.numPadLines = self.getNumLinesDisplayed()
+            #self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
+            #self.updateScreen()
     
     def getColorPair(self, fgColor=None, bgColor=None, name=None, attrList=None):
         """
@@ -1152,8 +1232,19 @@ class CursesChunkSelector(object):
         self.initColorPair(curses.COLOR_GREEN, curses.COLOR_BLACK, name="addition")
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
-        self.statuswin = curses.newwin(2,0,0,0)
-        self.chunkwin = curses.newwin(0,0,2, 0)
+        self.statuswin = curses.newwin(self.numStatusLines,0,0,0)
+        
+        # figure out how much space to allocate for the chunk-pad which is
+        # used for displaying the patch
+        
+        # stupid hack to prevent getNumLinesDisplayed from failing
+        self.chunkpad = curses.newpad(1,self.xScreenSize)
+        
+        self.numPadLines = self.getNumLinesDisplayed()
+        self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
+        
+        # initialize selecteItemEndLine (initial start-line is 0)
+        self.selectedItemEndLine = self.getNumLinesDisplayed(self.currentSelectedItem, recurseChildren=False)
         
         #import rpdb2; rpdb2.start_embedded_debugger("secret")
 
