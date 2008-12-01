@@ -552,7 +552,7 @@ def filterpatch(ui, chunks):
     # with curses.  Create a list of headers only.
     headers = [c for c in chunks if isinstance(c, header)]
     
-    # let user choose headers/hunks, and mark their applied flags accordingly
+    # let user choose headers/hunks/lines, and mark their applied flags accordingly
     selectChunks(headers)
     
     appliedHunkList = []
@@ -783,8 +783,9 @@ class CursesChunkSelector(object):
         """
         if item is None:
             item = self.currentSelectedItem
-        
-        item.applied = not item.applied
+        # for now, disable line-toggling until this is supported by the commit code
+        if not isinstance(item, HunkLine):
+            item.applied = not item.applied
         
         if isinstance(item, header):
             if item.applied and not item.special():
