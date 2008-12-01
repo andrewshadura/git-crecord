@@ -584,13 +584,6 @@ def selectChunks(headerList):
     
     chunkSelector = CursesChunkSelector(headerList)
     curses.wrapper(chunkSelector.main)
-    
-    # todo: move this to a curses confirmation dialog
-    query = 'are you sure you want to commit the selected chunks [yN]? '
-    r = raw_input(query).lower()
-    if not r.startswith('y'):
-        raise util.Abort(_('user quit'))
-    
 
 class CursesChunkSelector(object):
     def __init__(self, headerList):
@@ -1246,6 +1239,25 @@ The following are valid keystrokes:
         helpwin.refresh()
         self.stdscr.getch()
 
+    def confirmCommit(self):
+        "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
+        confirmText = "Are you sure you want to commit the selected changes [yN]? "
+        
+        confirmWin = curses.newwin(self.yScreenSize,0,0,0)
+        try:
+            self.printString(confirmWin, self.alignString(confirmText), pairName="selected")
+        except curses.error:
+            pass
+        confirmWin.refresh()
+        try:
+            response = chr(self.stdscr.getch())
+        except ValueError:
+            response = "n"
+        if response.lower().startswith("y"):
+            return True
+        else:
+            return False
+
     def main(self, stdscr):
         """
         Method to be wrapped by curses.wrapper() for selecting chunks.
@@ -1297,7 +1309,8 @@ The following are valid keystrokes:
             elif keyPressed in [ord("q")]:
                 raise util.Abort(_('user quit'))
             elif keyPressed in [ord("c")]:
-                break
+                if self.confirmCommit():
+                    break
             elif keyPressed in [ord(' ')]:
                 self.toggleApply()
             elif keyPressed in [ord("f")]: 
