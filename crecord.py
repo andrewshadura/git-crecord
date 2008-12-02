@@ -828,10 +828,14 @@ class CursesChunkSelector(object):
             if item.hunk.applied and not item.hunk.header.applied:
                 item.hunk.header.applied = True
     
-    def toggleFolded(self, item=None):
+    def toggleFolded(self, item=None, foldParent=False):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
             item = self.currentSelectedItem
+        if not isinstance(item, header) and foldParent:
+            item = item.parentItem()
+            # we need to select the parent item in this case
+            self.currentSelectedItem = item
         
         if isinstance(item, (header, hunk)):
             item.folded = not item.folded
@@ -1314,9 +1318,11 @@ The following are valid keystrokes:
                     break
             elif keyPressed in [ord(' ')]:
                 self.toggleApply()
-            elif keyPressed in [ord("f")]: 
+            elif keyPressed in [ord("f")]:
                 self.toggleFolded()
-            elif keyPressed in [ord("?")]: 
+            elif keyPressed in [ord("F")]:
+                self.toggleFolded(foldParent=True)
+            elif keyPressed in [ord("?")]:
                 self.helpWindow()
 
 def crecord(ui, repo, *pats, **opts):
