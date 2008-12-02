@@ -13,6 +13,7 @@ from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
 import copy, cStringIO, errno, operator, os, re, tempfile
 import curses
+import curses.textpad
 import signal
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
@@ -545,7 +546,7 @@ def parsepatch(fp):
         state = newstate
     return p.finished()
 
-def filterpatch(ui, chunks):
+def filterpatch(opts, chunks):
     """Interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
@@ -557,7 +558,7 @@ def filterpatch(ui, chunks):
         return []
     
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
-    selectChunks(headers)
+    selectChunks(opts, headers)
     
     appliedHunkList = []
     for hdr in headers:
@@ -577,7 +578,7 @@ def filterpatch(ui, chunks):
     
     return appliedHunkList
 
-def selectChunks(headerList):
+def selectChunks(opts, headerList):
     """
     Curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
@@ -587,7 +588,7 @@ def selectChunks(headerList):
     curses.start_color()
     
     chunkSelector = CursesChunkSelector(headerList)
-    curses.wrapper(chunkSelector.main)
+    curses.wrapper(chunkSelector.main, opts)
 
 class CursesChunkSelector(object):
     def __init__(self, headerList):
@@ -633,6 +634,9 @@ class CursesChunkSelector(object):
         
         # the first line of the pad which is visible on the screen
         self.firstLineOfPadToPrint = 0
+        
+        # stores optional text for a commit comment provided by the user
+        self.commentText = ""
     
     def upArrowEvent(self):
         """
@@ -1233,6 +1237,7 @@ The following are valid keystrokes:
  Right/Left-arrow [l/h] : go to child item / parent item
                       f : fold / unfold item, hiding/revealing its children
                       F : fold parent item
+                      m : edit / resume editing the commit message
                       c : commit selected changes
                       q : quit without committing (no changes will be made)
                       ? : help (what you're currently reading)"""
@@ -1247,6 +1252,29 @@ The following are valid keystrokes:
             pass
         helpwin.refresh()
         self.stdscr.getch()
+
+    def commitMessageWindow(self):
+        "Create a temporary commit message editing window on the screen."
+        # In Python versions < 2.6, there is no insert mode (only overwrite) :(
+        def keyFilter(key):
+            "provide keymappings to emacs-style keys"
+            if key in (7,):
+                # diable keys we're re-mapping
+                return ""
+            elif key == 24: # CTRL-X
+                return 7 # CTRL-G (i.e. exit comment window)
+            else:
+                return key
+        statusline = curses.newwin(2,0,0,0)
+        statusLineText = "  Begin/resume editing of commit message.  CTRL-X returns to patch view."
+        self.printString(statusline, self.alignString(statusLineText), pairName="legend")
+        statusline.refresh()
+        helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
+        reversedCommentText = self.commentText[::-1]
+        for char in reversedCommentText:
+            curses.ungetch(ord(char))
+        t = curses.textpad.Textbox(helpwin)
+        self.commentText = t.edit(keyFilter).rstrip(" \n")
 
     def confirmCommit(self):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
@@ -1267,7 +1295,7 @@ The following are valid keystrokes:
         else:
             return False
 
-    def main(self, stdscr):
+    def main(self, stdscr, opts):
         """
         Method to be wrapped by curses.wrapper() for selecting chunks.
         
@@ -1297,7 +1325,13 @@ The following are valid keystrokes:
         
         # initialize selecteItemEndLine (initial start-line is 0)
         self.selectedItemEndLine = self.getNumLinesDisplayed(self.currentSelectedItem, recurseChildren=False)
+
+        try:
+            self.commentText = opts['message']
+        except KeyError:
+            pass
         
+
         #import rpdb2; rpdb2.start_embedded_debugger("secret")
 
         while True:
@@ -1328,6 +1362,12 @@ The following are valid keystrokes:
                 self.toggleFolded(foldParent=True)
             elif keyPressed in [ord("?")]:
                 self.helpWindow()
+            elif keyPressed in [ord("m")]:
+                self.commitMessageWindow()
+        
+        if self.commentText != "":
+            opts['message'] = self.commentText
+
 
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit
@@ -1343,7 +1383,6 @@ def crecord(ui, repo, *pats, **opts):
     '''
     def record_committer(ui, repo, pats, opts):
         commands.commit(ui, repo, *pats, **opts)
-
     dorecord(ui, repo, record_committer, *pats, **opts)
 
 
@@ -1397,7 +1436,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
-        chunks = filterpatch(ui, parsepatch(fp))
+        chunks = filterpatch(opts, parsepatch(fp))
         del fp
 
         contenders = {}
