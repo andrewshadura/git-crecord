@@ -920,8 +920,8 @@ class CursesChunkSelector(object):
 
         # print out the status lines at the top
         try:
-            printString(self.statuswin, alignString("SELECT CHUNKS: (j/k/up/down) move cursor; (space) toggle applied; (q)uit"), pairName="legend")
-            printString(self.statuswin, alignString(" (f)old/unfold header; (c)ommit applied  |  [X]=hunk applied **=folded"), pairName="legend")
+            printString(self.statuswin, alignString("SELECT CHUNKS: (j/k/up/down/pgup/pgdn) move cursor; (space) toggle applied"), pairName="legend")
+            printString(self.statuswin, alignString(" (f)old/unfold; (c)ommit applied; (q)uit; (?) help | [X]=hunk applied **=folded"), pairName="legend")
         except curses.error:
             pass
         
@@ -1215,7 +1215,7 @@ class CursesChunkSelector(object):
 
     def helpWindow(self):
         "Print a help window to the screen.  Exit after any keypress."
-        helpText = """HELP  [press any key to return to the patch-display]
+        helpText = """            [press any key to return to the patch-display]
 
 crecord allows you to interactively choose among the changes you have made,
 and commit only those changes you select.  After committing the selected
