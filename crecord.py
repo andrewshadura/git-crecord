@@ -552,6 +552,10 @@ def filterpatch(ui, chunks):
     # with curses.  Create a list of headers only.
     headers = [c for c in chunks if isinstance(c, header)]
     
+    # if there are no changed files
+    if len(headers) == 0:
+        return []
+    
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
     selectChunks(headers)
     
