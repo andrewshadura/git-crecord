@@ -863,17 +863,10 @@ class CursesChunkSelector(object):
         """
         y,xStart = self.chunkpad.getyx()
         width = self.xScreenSize
-        strLen = len(inStr)
-        # tabs jump to the next tabstop; tabstop width is 8 characters
-        # tabs count for max. 8 characters on the display, so subtract
-        # 7-(xStart % 8) for the first, and 7 for each tab thereafter.
-        # TODO: deal with unicode characters in a similar way
-        numTabs = inStr.count("\t")
-        if numTabs > 0:
-            tabWidthAdjustment = (7 - (xStart % 8)) + (numTabs-1)*7
-        else:
-            tabWidthAdjustment = 0
-        numSpaces = (width - ((strLen + xStart) % width) - tabWidthAdjustment - 1)
+        # turn tabs into spaces
+        inStr = inStr.expandtabs(4)
+        strLen = len(unicode(util.fromlocal(inStr), 'utf-8'))
+        numSpaces = (width - ((strLen + xStart) % width) - 1)
         return inStr + " " * numSpaces + "\n"
 
     def printString(self, window, text, fgColor=None, bgColor=None, pair=None, pairName=None, attrList=None, toWin=True):
@@ -891,6 +884,9 @@ class CursesChunkSelector(object):
         UNDERLINE].
         
         """
+        # preprocess the text, converting tabs to spaces
+        text = text.expandtabs(4)
+        
         if not toWin: # if we shouldn't print to the window
             return text
         if pair is not None:
@@ -920,15 +916,11 @@ class CursesChunkSelector(object):
                     colorPair |= textAttr
                 
         y,xStart = self.chunkpad.getyx()
-        textlen=len(text) #debug
-        width = self.xScreenSize #debug
-        
         linesPrinted = (xStart + len(text)) / self.xScreenSize
+        window.addstr(text, colorPair)
         # is reset to 0 at the beginning of printItem()
         self.linesPrintedToPadSoFar += linesPrinted
-        window.addstr(text, colorPair)
         return text
-
 
     def updateScreen(self):
         self.statuswin.erase()
@@ -1345,6 +1337,7 @@ The following are valid keystrokes:
         
 
         #import rpdb2; rpdb2.start_embedded_debugger("secret")
+        #import rpdb2; rpdb2.setbreak()
 
         while True:
             self.updateScreen()
