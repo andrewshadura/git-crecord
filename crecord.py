@@ -476,7 +476,7 @@ class hunk(PatchNode):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
 def parsepatch(fp):
-    """patch -> [] of hunks """
+    "Parse a patch, returning a list of header and hunk objects."
     class parser(object):
         """patch parsing state machine"""
         def __init__(self):
@@ -490,14 +490,35 @@ def parsepatch(fp):
             self.stream = []
 
         def _range(self, (fromstart, fromend, tostart, toend, proc)):
-            """
-            Take range line, and store its information to the associated
-            instance variables.
-            
-            """
+            "Store range line info to associated instance variables."
             self.fromline = int(fromstart)
             self.toline = int(tostart)
             self.proc = proc
+
+        def add_new_hunk(self):
+            """
+            Create a new complete hunk object, adding it to the latest header
+            and to self.stream.
+            
+            Add all of the previously collected information about
+            the hunk to the new hunk object.  This information includes
+            header, from/to-lines, function (self.proc), preceding context
+            lines, changed lines, as well as the current context lines (which
+            follow the changed lines).
+            
+            The size of the from/to lines are updated to be correct for the
+            next hunk we parse.
+            
+            """
+            h = hunk(self.header, self.fromline, self.toline, self.proc,
+                     self.before, self.changedlines, self.context)
+            self.header.hunks.append(h)
+            self.stream.append(h)
+            self.fromline += len(self.before) + h.removed
+            self.toline += len(self.before) + h.added
+            self.before = []
+            self.changedlines = []
+            self.proc = ''
 
         def _context(self, context):
             """
@@ -505,70 +526,62 @@ def parsepatch(fp):
             
             Also, if an unprocessed set of changelines was previously
             encountered, this is the condition for creating a complete
-            hunk object.
-            
-            In this case, all of the previously collected information about
-            the hunk (header, from/to-lines, function (self.proc), preceding
-            context lines, changed lines), as well as the current (following)
-            context lines, are added to a new hunk object.
-            
-            This new hunk object is added to the current header's hunk-list,
-            as well as to the self.stream list.  Also, the size of the from/to
-            lines are updated to be correct for the next hunk we parse.
+            hunk object.  In this case, we create and add a new hunk object to
+            the most recent header object, and to self.strem. 
             
             """
-            if self.changedlines:
-                h = hunk(self.header, self.fromline, self.toline, self.proc,
-                         self.before, self.changedlines, context)
-                self.header.hunks.append(h)
-                self.stream.append(h)
-                self.fromline += len(self.before) + h.removed
-                self.toline += len(self.before) + h.added
-                self.before = []
-                self.changedlines = []
-                self.proc = ''
             self.context = context
+            # if there have been changed lines encountered that haven't yet
+            # been add to a hunk.
+            if self.changedlines:
+                self.add_new_hunk()
 
         def _changedlines(self, changedlines):
             """
             Store the changed lines in self.changedlines.
             
-            If there are already some context lines recorded to self.context,
-            then mark these lines as preceding the changed-lines
-            (i.e. store them as self.before).
+            Mark any context lines in the context-line buffer (self.context) as
+            lines preceding the changed-lines (i.e. stored in self.before), and
+            clear the context-line buffer.
             
             """
-            if self.context:
-                self.before = self.context
-                self.context = []
             self.changedlines = changedlines
+            self.before = self.context
+            self.context = []
 
-        def _newfile(self, hdr):
+        def add_new_header(self, hdr):
             """
-            Create a header object containing the header lines, and information
-            on which file the header is for.  Add this object as self.header,
-            and add it to self.stream.
+            Create a header object containing the header lines, and the
+            filename the header applies to.  Add the header to self.stream.
             
             """
-            # 
-            self._context([])
-            h = self.header = header(hdr)
-            self.stream.append(h)
+            # if there are any lines in the unchanged-lines buffer, create a 
+            # new hunk using them, and add it to the last header.
+            if self.changedlines:
+                self.add_new_hunk()
+
+            # create a new header and add it to self.stream
+            self.header = header(hdr)
+            self.stream.append(self.header)
 
         def finished(self):
-            self._context([])
+            # if there are any lines in the unchanged-lines buffer, create a 
+            # new hunk using them, and add it to the last header.
+            if self.changedlines:
+                self.add_new_hunk()
+
             return self.stream
 
         transitions = {
             'file': {'context': _context,
-                     'file': _newfile,
+                     'file': add_new_header,
                      'hunk': _changedlines,
                      'range': _range},
-            'context': {'file': _newfile,
+            'context': {'file': add_new_header,
                         'hunk': _changedlines,
                         'range': _range},
             'hunk': {'context': _context,
-                     'file': _newfile,
+                     'file': add_new_header,
                      'range': _range},
             'range': {'context': _context,
                       'hunk': _changedlines},
@@ -576,6 +589,7 @@ def parsepatch(fp):
 
     p = parser()
 
+    # run the state-machine
     state = 'context'
     for newstate, data in scanpatch(fp):
         try:
