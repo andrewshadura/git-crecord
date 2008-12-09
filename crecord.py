@@ -75,7 +75,7 @@ def scanpatch(fp):
 
 class PatchNode(object):
     "Abstract Class for Patch Graph Nodes (i.e. PatchRoot, header, hunk, HunkLine)"
-    
+
     def firstChild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
@@ -87,7 +87,7 @@ class PatchNode(object):
         Return the closest next item of the same type where there are no items
         of different types between the current item and this closest item.
         If no such item exists, return None.
-        
+
         """
         raise NotImplementedError("method must be implemented by subclass")
 
@@ -96,30 +96,30 @@ class PatchNode(object):
         Return the closest previous item of the same type where there are no
         items of different types between the current item and this closest item.
         If no such item exists, return None.
-        
+
         """
         raise NotImplementedError("method must be implemented by subclass")
 
     def parentItem(self):
         raise NotImplementedError("method must be implemented by subclass")
-    
-    
+
+
     def nextItem(self, constrainLevel=True, skipFolded=True):
         """
         If constrainLevel == True, return the closest next item
         of the same type where there are no items of different types between
         the current item and this closest item.
-        
+
         If constrainLevel == False, then try to return the next item
         closest to this item, regardless of item's type (header, hunk, or
         HunkLine).
-        
+
         If skipFolded == True, and the current item is folded, then the child
         items that are hidden due to folding will be skipped when determining
         the next item.
-        
+
         If it is not possible to get the next item, return None.
-        
+
         """
         try:
             itemFolded = self.folded
@@ -140,18 +140,18 @@ class PatchNode(object):
             item = self.firstChild()
             if item is not None:
                 return item
-            
+
             # else try next sibling
             item = self.nextSibling()
             if item is not None:
                 return item
-            
+
             try:
                 # else try parent's next sibling
                 item = self.parentItem().nextSibling()
                 if item is not None:
                     return item
-                
+
                 # else return grandparent's next sibling (or None)
                 return self.parentItem().parentItem().nextSibling()
 
@@ -163,7 +163,7 @@ class PatchNode(object):
         If constrainLevel == True, return the closest previous item
         of the same type where there are no items of different types between
         the current item and this closest item.
-        
+
         If constrainLevel == False, then try to return the previous item
         closest to this item, regardless of item's type (header, hunk, or
         HunkLine).
@@ -173,7 +173,7 @@ class PatchNode(object):
         next item.
 
         If it is not possible to get the previous item, return None.
-        
+
         """
         if constrainLevel:
             return self.prevSibling()
@@ -191,14 +191,14 @@ class PatchNode(object):
                         return prevSiblingLastChild
                 else:
                     return prevSibling
-            
+
             # try parent (or None)
             return self.parentItem()
 
 class Patch(PatchNode, list): # TODO: rename PatchRoot
     """
     List of header objects representing the patch.
-    
+
     """
     def __init__(self, headerList):
         self.extend(headerList)
@@ -223,7 +223,7 @@ class header(PatchNode):
         self.applied = True
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = False
-        
+
         # list of all headers in patch
         self.patch = None
 
@@ -231,7 +231,7 @@ class header(PatchNode):
         """
         Return True if the file represented by the header is a binary file.
         Otherwise return False.
-        
+
         """
         for h in self.header:
             if h.startswith('index '):
@@ -259,7 +259,7 @@ class header(PatchNode):
         x = cStringIO.StringIO()
         self.pretty(x)
         return x.getvalue()
-        
+
     def write(self, fp):
         fp.write(''.join(self.header))
 
@@ -268,7 +268,7 @@ class header(PatchNode):
         Return True if the file which the header represents was changed completely (i.e.
         there is no possibility of applying a hunk of changes smaller than the size of the
         entire file.)  Otherwise return False
-        
+
         """
         for h in self.header:
             if self.allhunks_re.match(h):
@@ -295,7 +295,7 @@ class header(PatchNode):
     def nextSibling(self):
         numHeadersInPatch = len(self.patch)
         indexOfThisHeader = self.patch.index(self)
-        
+
         if indexOfThisHeader < numHeadersInPatch - 1:
             nextHeader = self.patch[indexOfThisHeader + 1]
             return nextHeader
@@ -316,7 +316,7 @@ class header(PatchNode):
         so return None.
         """
         return None
-    
+
     def firstChild(self):
         "Return the first child of this item, if one exists.  Otherwise None."
         if len(self.hunks) > 0:
@@ -341,20 +341,20 @@ class HunkLine(PatchNode):
         # folding lines currently is not used/needed, but this flag is needed
         # in the prevItem method.
         self.folded = False
-    
+
     def prettyStr(self):
         return self.lineText
 
     def nextSibling(self):
         numLinesInHunk = len(self.hunk.changedLines)
         indexOfThisLine = self.hunk.changedLines.index(self)
-        
+
         if (indexOfThisLine < numLinesInHunk - 1):
             nextLine = self.hunk.changedLines[indexOfThisLine + 1]
             return nextLine
         else:
             return None
-    
+
     def prevSibling(self):
         indexOfThisLine = self.hunk.changedLines.index(self)
         if indexOfThisLine > 0:
@@ -362,7 +362,7 @@ class HunkLine(PatchNode):
             return previousLine
         else:
             return None
-    
+
     def parentItem(self):
         "Return the parent to the current item"
         return self.hunk
@@ -395,9 +395,10 @@ class hunk(PatchNode):
         self.fromline, self.before = trimcontext(fromline, before)
         self.toline, self.after = trimcontext(toline, after)
         self.proc = proc
-        self.hunk = hunk
         self.changedLines = [HunkLine(line, self) for line in hunk]
-        self.added, self.removed = self.countchanges(self.hunk)
+        self.added, self.removed = self.countchanges()
+        # used at end for detecting how many removed lines were un-applied
+        self.originalremoved = self.removed
 
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = False
@@ -439,16 +440,17 @@ class hunk(PatchNode):
             return self.changedLines[-1]
         else:
             return None
-    
-    @staticmethod
-    def countchanges(hunk):
-        """hunk -> (n+,n-)"""
-        add = len([h for h in hunk if h[0] == '+'])
-        rem = len([h for h in hunk if h[0] == '-'])
+
+    def countchanges(self):
+        """changedLines -> (n+,n-)"""
+        add = len([l for l in self.changedLines if l.applied and l.prettyStr()[0] == '+'])
+        rem = len([l for l in self.changedLines if l.applied and l.prettyStr()[0] == '-'])
         return add, rem
 
     def getFromToLine(self):
-        delta = len(self.before) + len(self.after)
+        # calculate the number of removed lines converted to context lines
+        removedConvertedToContext = self.originalremoved - self.removed
+        delta = len(self.before) + len(self.after) + removedConvertedToContext
         if self.after and self.after[-1] == '\\ No newline at end of file\n':
             delta -= 1
         fromlen = delta + self.removed
@@ -459,14 +461,27 @@ class hunk(PatchNode):
         return fromToLine
 
     def write(self, fp):
+        # updated self.added/removed, which are used by getFromToLine()
+        self.added, self.removed = self.countchanges()
         fp.write(self.getFromToLine())
-        fp.write(''.join(self.before + self.hunk + self.after))
+
+        hunkLineList = []
+        # add the following to the list: (1) all applied lines, and
+        # (2) all unapplied removal lines (convert these to context lines)
+        for changedLine in self.changedLines:
+            changedLineStr = changedLine.prettyStr()
+            if changedLine.applied:
+                hunkLineList.append(changedLineStr)
+            elif changedLineStr[0] == "-":
+                hunkLineList.append(" " + changedLineStr[1:])
+
+        fp.write(''.join(self.before + hunkLineList + self.after))
 
     pretty = write
 
     def filename(self):
         return self.header.filename()
-    
+
     def prettyStr(self):
         x = cStringIO.StringIO()
         self.pretty(x)
@@ -499,16 +514,16 @@ def parsepatch(fp):
             """
             Create a new complete hunk object, adding it to the latest header
             and to self.stream.
-            
+
             Add all of the previously collected information about
             the hunk to the new hunk object.  This information includes
             header, from/to-lines, function (self.proc), preceding context
             lines, changed lines, as well as the current context lines (which
             follow the changed lines).
-            
+
             The size of the from/to lines are updated to be correct for the
             next hunk we parse.
-            
+
             """
             h = hunk(self.header, self.fromline, self.toline, self.proc,
                      self.before, self.changedlines, self.context)
@@ -523,12 +538,12 @@ def parsepatch(fp):
         def _context(self, context):
             """
             Set the value of self.context.
-            
+
             Also, if an unprocessed set of changelines was previously
             encountered, this is the condition for creating a complete
             hunk object.  In this case, we create and add a new hunk object to
             the most recent header object, and to self.strem. 
-            
+
             """
             self.context = context
             # if there have been changed lines encountered that haven't yet
@@ -539,11 +554,11 @@ def parsepatch(fp):
         def _changedlines(self, changedlines):
             """
             Store the changed lines in self.changedlines.
-            
+
             Mark any context lines in the context-line buffer (self.context) as
             lines preceding the changed-lines (i.e. stored in self.before), and
             clear the context-line buffer.
-            
+
             """
             self.changedlines = changedlines
             self.before = self.context
@@ -553,7 +568,7 @@ def parsepatch(fp):
             """
             Create a header object containing the header lines, and the
             filename the header applies to.  Add the header to self.stream.
-            
+
             """
             # if there are any lines in the unchanged-lines buffer, create a 
             # new hunk using them, and add it to the last header.
@@ -606,14 +621,14 @@ def filterpatch(opts, chunks):
     # convert chunks list into structure suitable for displaying/modifying
     # with curses.  Create a list of headers only.
     headers = [c for c in chunks if isinstance(c, header)]
-    
+
     # if there are no changed files
     if len(headers) == 0:
         return []
-    
+
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
     selectChunks(opts, headers)
-    
+
     appliedHunkList = []
     for hdr in headers:
         if hdr.applied and (hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0):
@@ -629,18 +644,18 @@ def filterpatch(opts, chunks):
                         hnk.toline += fixoffset
                 else:
                     fixoffset += hnk.removed - hnk.added
-    
+
     return appliedHunkList
 
 def selectChunks(opts, headerList):
     """
     Curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
-    
+
     """
     stdscr = curses.initscr()
     curses.start_color()
-    
+
     chunkSelector = CursesChunkSelector(headerList)
     curses.wrapper(chunkSelector.main, opts)
 
@@ -648,50 +663,50 @@ class CursesChunkSelector(object):
     def __init__(self, headerList):
         # put the headers into a patch object
         self.headerList = Patch(headerList)
-        
+
         # list of all chunks
         self.chunkList = []
         for h in headerList:
             self.chunkList.append(h)
             self.chunkList.extend(h.hunks)
-        
+
         # dictionary mapping (fgColor,bgColor) pairs to the corresponding curses
         # color-pair value.
         self.colorPairs = {}
         # maps custom nicknames of color-pairs to curses color-pair values
         self.colorPairNames = {}
-        
+
         # the currently selected header, hunk, or hunk-line
         self.currentSelectedItem = self.headerList[0]
-        
+
         # updated when printing out patch-display -- the 'lines' here are the
         # line positions *in the pad*, not on the screen.
         self.selectedItemStartLine = 0
         self.selectedItemEndLine = None
-        
+
         # define indentation levels
         self.headerIndentNumChars = 0
         self.hunkIndentNumChars = 3
         self.hunkLineIndentNumChars = 6
-        
+
         # the first line of the pad to print to the screen
         self.firstLineOfPadToPrint = 0
-        
+
         # keeps track of the number of lines in the pad
         self.numPadLines = None
-        
+
         self.numStatusLines = 2
-                
+
         # keep a running count of the number of lines printed to the pad
         # (used for determining when the selected item begins/ends)
         self.linesPrintedToPadSoFar = 0
-        
+
         # the first line of the pad which is visible on the screen
         self.firstLineOfPadToPrint = 0
-        
+
         # stores optional text for a commit comment provided by the user
         self.commentText = ""
-    
+
     def upArrowEvent(self):
         """
         Try to select the previous item to the current item that has the
@@ -699,31 +714,31 @@ class CursesChunkSelector(object):
         the last HunkLine of the hunk prior to the selected hunk.  Or, if
         the first HunkLine of a hunk is currently selected, then select the
         hunk itself.
-        
+
         If the currently selected item is already at the top of the screen, 
         scroll the screen down to show the new-selected item.
-        
+
         """
         currentItem = self.currentSelectedItem
-        
+
         nextItem = currentItem.prevItem(constrainLevel=False)
-        
+
         if nextItem is None:
             # if no parent item (i.e. currentItem is the first header), then
             # no change...
             nextItem = currentItem
-        
+
         self.currentSelectedItem = nextItem
-    
+
     def upArrowShiftEvent(self):
         """
         Select (if possible) the previous item on the same level as the currently
         selected item.  Otherwise, select (if possible) the parent-item of the
         currently selected item.
-        
+
         If the currently selected item is already at the top of the screen, 
         scroll the screen down to show the new-selected item.
-        
+
         """
         currentItem = self.currentSelectedItem
         nextItem = currentItem.prevItem()
@@ -734,7 +749,7 @@ class CursesChunkSelector(object):
             # if no parent item (i.e. currentItem is the first header), then
             # no change...
             nextItem = currentItem
-        
+
         self.currentSelectedItem = nextItem
 
     def downArrowEvent(self):
@@ -744,19 +759,19 @@ class CursesChunkSelector(object):
         the first HunkLine of the selected hunk.  Or, if the last HunkLine of
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
-        
+
         If the currently selected item is already at the bottom of the screen, 
         scroll the screen up to show the new-selected item.
-        
+
         """
         #self.startPrintLine += 1 #DEBUG
         currentItem = self.currentSelectedItem
-        
+
         nextItem = currentItem.nextItem(constrainLevel=False)
         # if there's no next item, keep the selection as-is
         if nextItem is None:
             nextItem = currentItem
-        
+
         self.currentSelectedItem = nextItem
 
     def downArrowShiftEvent(self):
@@ -766,7 +781,7 @@ class CursesChunkSelector(object):
 
         """
         # TODO: update docstring
-        
+
         currentItem = self.currentSelectedItem
         nextItem = currentItem.nextItem()
         # if there's no previous item on this level, try choosing the parent's
@@ -786,15 +801,15 @@ class CursesChunkSelector(object):
     def rightArrowEvent(self):
         """
         Select (if possible) the first of this item's child-items.
-        
+
         """
         currentItem = self.currentSelectedItem
         nextItem = currentItem.firstChild()
-        
+
         # turn off folding if we want to show a child-item
         if currentItem.folded:
             currentItem.folded = False
-        
+
         if nextItem is None:
             # if no next item on parent-level, then no change...
             nextItem = currentItem
@@ -804,11 +819,11 @@ class CursesChunkSelector(object):
     def leftArrowEvent(self):
         """
         Select (if possible) the parent of this item.
-        
+
         """
         currentItem = self.currentSelectedItem
         nextItem = currentItem.parentItem()
-        
+
         if nextItem is None:
             # if no next item on parent-level, then no change...
             nextItem = currentItem
@@ -821,13 +836,13 @@ class CursesChunkSelector(object):
         selEnd = self.selectedItemEndLine
         padStart = self.firstLineOfPadToPrint
         padEnd = padStart + self.yScreenSize - self.numStatusLines - 1
-        
+
         if selEnd > padEnd:
             self.scrollLines(selEnd - padEnd)
         elif selStart < padStart:
             # negative values scroll in pgup direction
             self.scrollLines(selStart - padStart)
-        
+
 
     def scrollLines(self, numLines):
         "Scroll the screen up (down) by numLines when numLines >0 (<0)."
@@ -841,14 +856,14 @@ class CursesChunkSelector(object):
         """
         Toggle the applied flag of the specified item.  If no item is specified,
         toggle the flag of the currently selected item.
-        
+
         """
         if item is None:
             item = self.currentSelectedItem
-        # for now, disable line-toggling until this is supported by the commit code
-        if not isinstance(item, HunkLine):
-            item.applied = not item.applied
-        
+        ## for now, disable line-toggling until this is supported by the commit code
+        #if not isinstance(item, HunkLine):
+        item.applied = not item.applied
+
         if isinstance(item, header):
             if item.applied and not item.special():
                 # apply all its hunks
@@ -889,7 +904,7 @@ class CursesChunkSelector(object):
             # apply the header if it's not applied and we're applying a child hunk
             if item.hunk.applied and not item.hunk.header.applied:
                 item.hunk.header.applied = True
-    
+
     def toggleFolded(self, item=None, foldParent=False):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
@@ -898,10 +913,10 @@ class CursesChunkSelector(object):
             item = item.parentItem()
             # we need to select the parent item in this case
             self.currentSelectedItem = item
-        
+
         if isinstance(item, (header, hunk)):
             item.folded = not item.folded
-        
+
 
     def alignString(self, inStr):
         """
@@ -909,7 +924,7 @@ class CursesChunkSelector(object):
         the screen in the x direction.  The current cursor position is
         taken into account when making this calculation.  The string can span
         multiple lines.
-        
+
         """
         y,xStart = self.chunkpad.getyx()
         width = self.xScreenSize
@@ -923,20 +938,20 @@ class CursesChunkSelector(object):
         """
         Print the string, text, with the specified colors and attributes, to
         the specified curses window object.
-        
+
         The foreground and background colors are of the form
         curses.COLOR_XXXX, where XXXX is one of: [BLACK, BLUE, CYAN, GREEN,
         MAGENTA, RED, WHITE, YELLOW].  If pairName is provided, a color
         pair will be looked up in the self.colorPairNames dictionary.
-        
+
         attrList is a list containing text attributes in the form of 
         curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
         UNDERLINE].
-        
+
         """
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
-        
+
         if not toWin: # if we shouldn't print to the window
             return text
         if pair is not None:
@@ -964,7 +979,7 @@ class CursesChunkSelector(object):
             for textAttr in (curses.A_UNDERLINE, curses.A_BOLD):
                 if textAttr in attrList:
                     colorPair |= textAttr
-                
+
         y,xStart = self.chunkpad.getyx()
         linesPrinted = (xStart + len(text)) / self.xScreenSize
         window.addstr(text, colorPair)
@@ -986,7 +1001,7 @@ class CursesChunkSelector(object):
             printString(self.statuswin, alignString(" (f)old/unfold; (c)ommit applied; (q)uit; (?) help | [X]=hunk applied **=folded"), pairName="legend")
         except curses.error:
             pass
-        
+
         # print out the patch in the remaining part of the window
         try:
             self.printItem()
@@ -994,7 +1009,7 @@ class CursesChunkSelector(object):
             self.chunkpad.refresh(self.firstLineOfPadToPrint,0,self.numStatusLines,0,self.yScreenSize+1-self.numStatusLines,self.xScreenSize)
         except curses.error:
             pass
-        
+
         # refresh([pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol])
         self.statuswin.refresh()
 
@@ -1002,7 +1017,7 @@ class CursesChunkSelector(object):
         """
         Create a string to prefix a line with which indicates whether 'item'
         is applied and/or folded.
-        
+
         """
         # create checkBox string
         if item.applied:
@@ -1017,19 +1032,19 @@ class CursesChunkSelector(object):
                 checkBox += "  "
         except AttributeError: # not foldable
             checkBox += "  "
-        
+
         return checkBox
 
     def printHeader(self, header, selected=False, countLines=False, toWin=True):
         """
         Print the header to the pad.  If countLines is True, don't print
         anything, but just count the number of lines which would be printed.
-        
+
         """
         outStr = ""
         text = header.prettyStr()
         chunkIndex = self.chunkList.index(header)
-        
+
         if chunkIndex != 0:
             # add separating line before headers
             outStr += self.printString(self.chunkpad, '_'*self.xScreenSize, toWin=toWin)
@@ -1040,7 +1055,7 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
 
         # print out each line of the chunk, expanding it to screen width
-        
+
         # number of characters to indent lines on this level by
         indentNumChars = 0
         checkBox = self.getStatusPrefixString(header)
@@ -1051,15 +1066,15 @@ class CursesChunkSelector(object):
             for line in textList[1:]:
                 lineStr = " "*(indentNumChars + len(checkBox)) + line
                 outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
-        
+
         return outStr
-    
+
     def printHunkLinesBefore(self, hunk, selected=False, toWin=True):
         "includes start/end line indicator"
         outStr = ""
         # where hunk is in list of siblings
         hunkIndex = hunk.header.hunks.index(hunk)
-        
+
         if hunkIndex != 0:
             # add separating line before headers
             outStr += self.printString(self.chunkpad, ' '*self.xScreenSize, toWin=toWin)
@@ -1068,49 +1083,49 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
         else:
             colorPair = self.getColorPair(name="normal", attrList=[curses.A_BOLD])
-            
+
         # print out from-to line with checkbox
         checkBox = self.getStatusPrefixString(hunk)
 
         linePrefix = " "*self.hunkIndentNumChars + checkBox
         frToLine = "   " + hunk.getFromToLine().strip("\n")
-                
-                
+
+
         outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
         outStr += self.printString(self.chunkpad, self.alignString(frToLine), pair=colorPair, toWin=toWin)
 
         if hunk.folded:
             # skip remainder of output
             return outStr
-        
+
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
             lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
             outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
-        
+
         return outStr
-        
+
     def printHunkLinesAfter(self, hunk, toWin=True):
         outStr = ""
         if hunk.folded:
             return outStr
-        
-        indentNumChars = self.hunkLineIndentNumChars
+
+        indentNumChars = self.hunkLineIndentNumChars-1
         # a bit superfluous, but to avoid hard-coding indent amount
         checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
             lineStr = " "*(indentNumChars + len(checkBox)) + line.strip("\n")
             outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
-        
+
         return outStr
-        
+
     def printHunkChangedLine(self, hunkLine, selected=False, toWin=True):
         outStr = ""
         indentNumChars = self.hunkLineIndentNumChars
         checkBox = self.getStatusPrefixString(hunkLine)
-        
+
         lineStr = hunkLine.prettyStr().strip("\n")
-        
+
         # select color-pair based on whether line is an addition/removal
         if selected:
             colorPair = self.getColorPair(name="selected")
@@ -1118,7 +1133,7 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="addition")
         elif lineStr.startswith("-"):
             colorPair = self.getColorPair(name="deletion")
-        
+
         linePrefix = " "*indentNumChars + checkBox
         outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
         outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
@@ -1139,20 +1154,20 @@ class CursesChunkSelector(object):
         if recurseChildren:
             # remove the string when finished, so it doesn't accumulate
             del outStr
-        
+
         return retStr
-    
+
     def __printItem(self, item, ignoreFolding, recurseChildren, toWin=True):
         """
         Recursive method for printing out patch/header/hunk/hunk-line data to
         screen.  Also returns a string with all of the content of the displayed
         patch (not including coloring, etc.).
-        
+
         If ignoreFolding is True, then folded items are printed out.
-        
+
         If recurseChildren is False, then only print the item without its
         child items.
-        
+
         """
         # keep outStr local, since we're not recursing
         if recurseChildren:
@@ -1163,14 +1178,14 @@ class CursesChunkSelector(object):
                 outStr = ""
         else:
             outStr = ""
-        
+
         selected = (item is self.currentSelectedItem)
         if selected and recurseChildren:
             # assumes line numbering starting from line 0
             self.selectedItemStartLine = self.linesPrintedToPadSoFar
             selectedItemLines = self.getNumLinesDisplayed(item, recurseChildren=False)
             self.selectedItemEndLine = self.selectedItemStartLine + selectedItemLines - 1
-        
+
         # Patch object is a list of headers
         if isinstance(item, Patch):
             if recurseChildren:
@@ -1202,13 +1217,13 @@ class CursesChunkSelector(object):
         If no item is given, assume the entire patch.
         If ignoreFolding is True, folded items will be unfolded when counting
         the number of lines.
-        
+
         """
         # temporarily disable printing to windows by printString
         patchDisplayString = self.printItem(item, ignoreFolding, recurseChildren, toWin=False)
         numLines = len(patchDisplayString)/self.xScreenSize
         return numLines
-    
+
     def sigwinchHandler(self, n, frame):
         "Handle window resizing"
         try:
@@ -1224,21 +1239,21 @@ class CursesChunkSelector(object):
             #self.numPadLines = self.getNumLinesDisplayed()
             #self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
             #self.updateScreen()
-    
+
     def getColorPair(self, fgColor=None, bgColor=None, name=None, attrList=None):
         """
         Get a curses color pair, adding it to self.colorPairs if it is not already
         defined.  An optional string, name, can be passed as a shortcut for
         referring to the color-pair.  By default, if no arguments are specified,
         the white foreground / black background color-pair is returned.
-        
+
         It is expected that this function will be used exclusively for initializing
         color pairs, and NOT curses.init_pair().
-        
+
         attrList is used to 'flavor' the returned color-pair.  This information
         is not stored in self.colorPairs.  It contains attribute values like
         curses.A_BOLD.
-        
+
         """
         if (name is not None) and self.colorPairNames.has_key(name):
             # then get the associated color pair and return it
@@ -1256,7 +1271,7 @@ class CursesChunkSelector(object):
                 colorPair = self.colorPairs[(fgColor, bgColor)] = curses.color_pair(pairIndex)
                 if name is not None:
                     self.colorPairNames[name] = curses.color_pair(pairIndex)
-        
+
         # add attributes if possible
         if attrList is None:
             attrList = []
@@ -1270,7 +1285,7 @@ class CursesChunkSelector(object):
                 if textAttrib in attrList:
                     colorPair |= textAttrib
         return colorPair
-    
+
     def initColorPair(self, *args, **kwargs):
         "Same as getColorPair."
         self.getColorPair(*args, **kwargs)    
@@ -1295,7 +1310,7 @@ The following are valid keystrokes:
                       c : commit selected changes
                       q : quit without committing (no changes will be made)
                       ? : help (what you're currently reading)"""
-        
+
         helpwin = curses.newwin(self.yScreenSize,0,0,0)
         helpLines = helpText.split("\n")
         helpLines = helpLines + [" "]*(self.yScreenSize-self.numStatusLines-len(helpLines)-1)
@@ -1333,7 +1348,7 @@ The following are valid keystrokes:
     def confirmCommit(self):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
         confirmText = "Are you sure you want to commit the selected changes [yN]? "
-        
+
         confirmWin = curses.newwin(self.yScreenSize,0,0,0)
         try:
             self.printString(confirmWin, self.alignString(confirmText), pairName="selected")
@@ -1352,12 +1367,12 @@ The following are valid keystrokes:
     def main(self, stdscr, opts):
         """
         Method to be wrapped by curses.wrapper() for selecting chunks.
-        
+
         """
         signal.signal(signal.SIGWINCH, self.sigwinchHandler)
         self.stdscr = stdscr
         self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
-        
+
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="normal")
@@ -1367,16 +1382,16 @@ The following are valid keystrokes:
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numStatusLines,0,0,0)
-        
+
         # figure out how much space to allocate for the chunk-pad which is
         # used for displaying the patch
-        
+
         # stupid hack to prevent getNumLinesDisplayed from failing
         self.chunkpad = curses.newpad(1,self.xScreenSize)
-        
+
         self.numPadLines = self.getNumLinesDisplayed()
         self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
-        
+
         # initialize selecteItemEndLine (initial start-line is 0)
         self.selectedItemEndLine = self.getNumLinesDisplayed(self.currentSelectedItem, recurseChildren=False)
 
@@ -1384,7 +1399,7 @@ The following are valid keystrokes:
             self.commentText = opts['message']
         except KeyError:
             pass
-        
+
 
         #import rpdb2; rpdb2.start_embedded_debugger("secret")
         #import rpdb2; rpdb2.setbreak()
@@ -1419,7 +1434,7 @@ The following are valid keystrokes:
                 self.helpWindow()
             elif keyPressed in [ord("m")]:
                 self.commitMessageWindow()
-        
+
         if self.commentText != "":
             opts['message'] = self.commentText
 
@@ -1434,7 +1449,7 @@ def crecord(ui, repo, *pats, **opts):
 
     You will be shown a list of patch hunks from which you can select
     those you would like to apply to the commit.
-    
+
     '''
     def record_committer(ui, repo, pats, opts):
         commands.commit(ui, repo, *pats, **opts)
