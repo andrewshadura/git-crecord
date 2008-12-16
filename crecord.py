@@ -1128,7 +1128,7 @@ class CursesChunkSelector(object):
         text = header.prettyStr()
         chunkIndex = self.chunkList.index(header)
 
-        if chunkIndex != 0:
+        if chunkIndex != 0 and not header.folded:
             # add separating line before headers
             outStr += self.printString(self.chunkpad, '_'*self.xScreenSize, toWin=toWin)
         # select color-pair based on if the header is selected
