@@ -221,6 +221,10 @@ class header(PatchNode):
         self.hunks = []
         # flag to indicate whether to apply this chunk
         self.applied = True
+        # flag which only affects the status display indicating if a node's
+        # children are partially applied (i.e. some applied, some not).
+        self.partial = False
+    
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = False
 
@@ -404,6 +408,9 @@ class hunk(PatchNode):
         self.folded = False
         # flag to indicate whether to apply this chunk
         self.applied = True
+        # flag which only affects the status display indicating if a node's
+        # children are partially applied (i.e. some applied, some not).
+        self.partial = False
 
     def nextSibling(self):
         numHunksInHeader = len(self.header.hunks)
@@ -866,18 +873,22 @@ class CursesChunkSelector(object):
         """
         if item is None:
             item = self.currentSelectedItem
-        ## for now, disable line-toggling until this is supported by the commit code
-        #if not isinstance(item, HunkLine):
+    
         item.applied = not item.applied
 
         if isinstance(item, header):
-            if item.applied and not item.special():
-                # apply all its hunks
-                for hnk in item.hunks:
-                    hnk.applied = True
-                    # apply all their HunkLines
-                    for hunkLine in hnk.changedLines:
-                        hunkLine.applied = True
+            item.partial = False
+            if item.applied:
+                if not item.special():
+                    # apply all its hunks
+                    for hnk in item.hunks:
+                        hnk.applied = True
+                        # apply all their HunkLines
+                        for hunkLine in hnk.changedLines:
+                            hunkLine.applied = True
+                else:
+                    # all children are off (but the header is on)
+                    item.partial = True
             else:
                 # un-apply all its hunks
                 for hnk in item.hunks:
@@ -886,31 +897,63 @@ class CursesChunkSelector(object):
                     for hunkLine in hnk.changedLines:
                         hunkLine.applied = False
         elif isinstance(item, hunk):
+            item.partial = False
             # apply all it's HunkLines
             for hunkLine in item.changedLines:
                 hunkLine.applied = item.applied
-            # if all 'sibling' hunks are not-applied
-            if not (True in [hnk.applied for hnk in item.header.hunks]) and \
-                                                    not item.header.special():
-                item.header.applied = False
-            # apply the header if it's not applied and we're applying a child hunk
-            if item.applied and not item.header.applied:
-                item.header.applied = True
-        elif isinstance(item, HunkLine):
-            # if all 'sibling' lines are not-applied
-            if not (True in [hnkln.applied for hnkln in item.hunk.changedLines]):
-                item.hunk.applied = False
-            # apply the hunk if it's not applied and we're applying a child line
-            if item.applied and not item.hunk.applied:
-                item.hunk.applied = True
-            # if all parent hunks are not applied, un-apply header
-            if not (True in [hnk.applied for hnk in item.hunk.header.hunks]) and \
-                                                    not item.hunk.header.special():
-                item.hunk.header.applied = False
-            # apply the header if it's not applied and we're applying a child hunk
-            if item.hunk.applied and not item.hunk.header.applied:
-                item.hunk.header.applied = True
 
+            siblingAppliedStatus = [hnk.applied for hnk in item.header.hunks]
+            allSiblingsApplied = not (False in siblingAppliedStatus) 
+            noSiblingsApplied = not (True in siblingAppliedStatus)
+        
+            siblingsPartialStatus = [hnk.partial for hnk in item.header.hunks]
+            someSiblingsPartial = (True in siblingsPartialStatus)
+        
+            #cases where applied or partial should be removed from header
+
+            # if no 'sibling' hunks are applied (including this hunk)
+            if noSiblingsApplied:
+                if not item.header.special():
+                    item.header.applied = False
+                    item.header.partial = False
+            else: # some/all parent siblings are applied
+                item.header.applied = True
+                item.header.partial = (someSiblingsPartial or \
+                                        not allSiblingsApplied)
+
+        elif isinstance(item, HunkLine):
+            siblingAppliedStatus = [hnkln.applied for hnkln in item.hunk.changedLines]
+            allSiblingsApplied = not (False in siblingAppliedStatus) 
+            noSiblingsApplied = not (True in siblingAppliedStatus)
+
+            # if no 'sibling' lines are applied
+            if noSiblingsApplied:
+                item.hunk.applied = False
+                item.hunk.partial = False
+            elif allSiblingsApplied:
+                item.hunk.applied = True
+                item.hunk.partial = False
+            else: # some siblings applied
+                item.hunk.applied = True
+                item.hunk.partial = True
+
+            parentSiblingsAppliedStatus = [hnk.applied for hnk in item.hunk.header.hunks]
+            noParentSiblingsApplied = not (True in parentSiblingsAppliedStatus)
+            allParentSiblingsApplied = not (False in parentSiblingsAppliedStatus)
+
+            parentSiblingsPartialStatus = [hnk.partial for hnk in item.hunk.header.hunks]
+            someParentSiblingsPartial = (True in parentSiblingsPartialStatus)
+
+            # if all parent hunks are not applied, un-apply header
+            if noParentSiblingsApplied:
+                if not item.hunk.header.special():
+                    item.hunk.header.applied = False
+                    item.hunk.header.partial = False
+            # set the applied and partial status of the header if needed
+            else: # some/all parent siblings are applied
+                item.hunk.header.applied = True
+                item.hunk.header.partial = (someParentSiblingsPartial or \
+                                            not allParentSiblingsApplied)
     def toggleFolded(self, item=None, foldParent=False):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
@@ -1027,7 +1070,10 @@ class CursesChunkSelector(object):
         """
         # create checkBox string
         if item.applied:
-            checkBox = "[X]"
+            if not isinstance(item, HunkLine) and item.partial:
+                checkBox = "[~]"
+            else:
+                checkBox = "[X]"
         else:
             checkBox = "[ ]"
 
@@ -1306,7 +1352,7 @@ changes, the unselected changes are still present in your working copy, so you
 can use crecord multiple times to split large changes into smaller changesets.
 The following are valid keystrokes:
 
-                [SPACE] : toggle selection of an item ([X] means selected)
+                [SPACE] : (un-)select item ([~]/[X] = partly/fully applied)
     Up/Down-arrow [k/j] : go to previous/next unfolded item
         PgUp/PgDn [K/J] : go to previous/next item of same type
  Right/Left-arrow [l/h] : go to child item / parent item
