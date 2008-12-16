@@ -229,7 +229,7 @@ class header(PatchNode):
         self.partial = False
 
         # flag to indicate whether to display as folded/unfolded to user
-        self.folded = False
+        self.folded = True
 
         # list of all headers in patch
         self.patch = None
@@ -411,7 +411,7 @@ class hunk(PatchNode):
         self.originalremoved = self.removed
 
         # flag to indicate whether to display as folded/unfolded to user
-        self.folded = False
+        self.folded = True
         # flag to indicate whether to apply this chunk
         self.applied = True
         # flag which only affects the status display indicating if a node's
@@ -506,7 +506,7 @@ class hunk(PatchNode):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-def parsepatch(fp):
+def parsepatch(changes, fp):
     "Parse a patch, returning a list of header and hunk objects."
     class parser(object):
         """patch parsing state machine"""
@@ -519,6 +519,7 @@ def parsepatch(fp):
             self.before = []
             self.changedlines = []
             self.stream = []
+            self.modified, self.added, self.removed = changes
 
         def _range(self, (fromstart, fromend, tostart, toend, proc)):
             "Store range line info to associated instance variables."
@@ -593,6 +594,13 @@ def parsepatch(fp):
 
             # create a new header and add it to self.stream
             self.header = header(hdr)
+            fileName = self.header.filename()
+            if fileName in self.modified:
+                self.header.changetype = "M"
+            elif fileName in self.added:
+                self.header.changetype = "A"
+            elif fileName in self.removed:
+                self.header.changetype = "R"
             self.stream.append(self.header)
 
         def finished(self):
@@ -915,10 +923,10 @@ class CursesChunkSelector(object):
             siblingAppliedStatus = [hnk.applied for hnk in item.header.hunks]
             allSiblingsApplied = not (False in siblingAppliedStatus) 
             noSiblingsApplied = not (True in siblingAppliedStatus)
-    
+
             siblingsPartialStatus = [hnk.partial for hnk in item.header.hunks]
             someSiblingsPartial = (True in siblingsPartialStatus)
-    
+
             #cases where applied or partial should be removed from header
 
             # if no 'sibling' hunks are applied (including this hunk)
@@ -1096,8 +1104,16 @@ class CursesChunkSelector(object):
         try:
             if item.folded:
                 checkBox += "**"
+                if isinstance(item, header):
+                    # one of "M", "A", or "D" (modified, added, deleted)
+                    fileStatus = item.changetype
+                 
+                    checkBox += fileStatus + " "
             else:
                 checkBox += "  "
+                if isinstance(item, header):
+                    # add two more spaces for headers
+                    checkBox += "  "
         except AttributeError: # not foldable
             checkBox += "  "
 
@@ -1127,13 +1143,17 @@ class CursesChunkSelector(object):
         # number of characters to indent lines on this level by
         indentNumChars = 0
         checkBox = self.getStatusPrefixString(header)
-        textList = text.split("\n")
-        lineStr = checkBox + textList[0]
+        if not header.folded:
+            textList = text.split("\n")
+            lineStr = checkBox + textList[0]
+        else:
+            lineStr = checkBox + header.filename()
         outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
-        if len(textList) > 1:
-            for line in textList[1:]:
-                lineStr = " "*(indentNumChars + len(checkBox)) + line
-                outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+        if not header.folded:
+            if len(textList) > 1:
+                for line in textList[1:]:
+                    lineStr = " "*(indentNumChars + len(checkBox)) + line
+                    outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
 
         return outStr
 
@@ -1574,7 +1594,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
-        chunks = filterpatch(opts, parsepatch(fp))
+        chunks = filterpatch(opts, parsepatch(changes, fp))
         del fp
 
         contenders = {}
