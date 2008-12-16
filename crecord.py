@@ -978,14 +978,13 @@ class CursesChunkSelector(object):
             item = self.currentSelectedItem
         if foldParent:
             if not isinstance(item, header):
-                item = item.parentItem()
+                # we need to select the parent item in this case
+                self.currentSelectedItem = item = item.parentItem()
+            
             # also fold any foldable children of the parent/current item
             if isinstance(item, header): # the original OR 'new' item
                 for child in item.allChildren():
                     child.folded = not item.folded
-
-            # we need to select the parent item in this case
-            self.currentSelectedItem = item
 
         if isinstance(item, (header, hunk)):
             item.folded = not item.folded
@@ -1119,7 +1118,7 @@ class CursesChunkSelector(object):
 
         return checkBox
 
-    def printHeader(self, header, selected=False, countLines=False, toWin=True):
+    def printHeader(self, header, selected=False, toWin=True, ignoreFolding=False):
         """
         Print the header to the pad.  If countLines is True, don't print
         anything, but just count the number of lines which would be printed.
@@ -1143,13 +1142,13 @@ class CursesChunkSelector(object):
         # number of characters to indent lines on this level by
         indentNumChars = 0
         checkBox = self.getStatusPrefixString(header)
-        if not header.folded:
+        if not header.folded or ignoreFolding:
             textList = text.split("\n")
             lineStr = checkBox + textList[0]
         else:
             lineStr = checkBox + header.filename()
         outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
-        if not header.folded:
+        if not header.folded or ignoreFolding:
             if len(textList) > 1:
                 for line in textList[1:]:
                     lineStr = " "*(indentNumChars + len(checkBox)) + line
@@ -1157,7 +1156,7 @@ class CursesChunkSelector(object):
 
         return outStr
 
-    def printHunkLinesBefore(self, hunk, selected=False, toWin=True):
+    def printHunkLinesBefore(self, hunk, selected=False, toWin=True, ignoreFolding=False):
         "includes start/end line indicator"
         outStr = ""
         # where hunk is in list of siblings
@@ -1182,7 +1181,7 @@ class CursesChunkSelector(object):
         outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
         outStr += self.printString(self.chunkpad, self.alignString(frToLine), pair=colorPair, toWin=toWin)
 
-        if hunk.folded:
+        if hunk.folded and not ignoreFolding:
             # skip remainder of output
             return outStr
 
@@ -1193,9 +1192,9 @@ class CursesChunkSelector(object):
 
         return outStr
 
-    def printHunkLinesAfter(self, hunk, toWin=True):
+    def printHunkLinesAfter(self, hunk, toWin=True, ignoreFolding=False):
         outStr = ""
-        if hunk.folded:
+        if hunk.folded and not ignoreFolding:
             return outStr
 
         indentNumChars = self.hunkLineIndentNumChars-1
@@ -1280,24 +1279,24 @@ class CursesChunkSelector(object):
                 for hdr in item:
                     self.__printItem(hdr, ignoreFolding, recurseChildren, toWin)
         if isinstance(item, header):
-            outStr += self.printHeader(item, selected, toWin=toWin)
+            outStr += self.printHeader(item, selected, toWin=toWin, ignoreFolding=ignoreFolding)
             if recurseChildren:
                 for hnk in item.hunks:
                     self.__printItem(hnk, ignoreFolding, recurseChildren, toWin)
         elif isinstance(item, hunk) and \
         ((not item.header.folded) or ignoreFolding):
             # print the hunk data which comes before the changed-lines
-            outStr += self.printHunkLinesBefore(item, selected, toWin=toWin)
+            outStr += self.printHunkLinesBefore(item, selected, toWin=toWin, ignoreFolding=ignoreFolding)
             if recurseChildren:
                 for line in item.changedLines:
                     self.__printItem(line, ignoreFolding, recurseChildren, toWin)
-                outStr += self.printHunkLinesAfter(item, toWin=toWin)
+                outStr += self.printHunkLinesAfter(item, toWin=toWin, ignoreFolding=ignoreFolding)
         elif isinstance(item, HunkLine) and ((not item.hunk.folded) or ignoreFolding):
             outStr += self.printHunkChangedLine(item, selected, toWin=toWin)
 
         return outStr
 
-    def getNumLinesDisplayed(self, item=None, ignoreFolding=True, recurseChildren=True):
+    def getNumLinesDisplayed(self, item=None, ignoreFolding=False, recurseChildren=True):
         """
         Return the number of lines which would be displayed if the item were
         to be printed to the display.  The item will NOT be printed to the
@@ -1477,7 +1476,7 @@ The following are valid keystrokes:
         # stupid hack to prevent getNumLinesDisplayed from failing
         self.chunkpad = curses.newpad(1,self.xScreenSize)
 
-        self.numPadLines = self.getNumLinesDisplayed()
+        self.numPadLines = self.getNumLinesDisplayed(ignoreFolding=True)
         self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
 
         # initialize selecteItemEndLine (initial start-line is 0)
