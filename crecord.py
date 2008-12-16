@@ -82,6 +82,9 @@ class PatchNode(object):
     def lastChild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
+    def allChildren(self):
+        "Return a list of all of the direct children of this node"
+        raise NotImplementedError("method must be implemented by subclass")
     def nextSibling(self):
         """
         Return the closest next item of the same type where there are no items
@@ -224,7 +227,7 @@ class header(PatchNode):
         # flag which only affects the status display indicating if a node's
         # children are partially applied (i.e. some applied, some not).
         self.partial = False
-    
+
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = False
 
@@ -335,6 +338,9 @@ class header(PatchNode):
         else:
             return None
 
+    def allChildren(self):
+        "Return a list of all of the direct children of this node"
+        return self.hunks
 class HunkLine(PatchNode):
     "Represents a changed line in a hunk"
     def __init__(self, lineText, hunk):
@@ -448,6 +454,9 @@ class hunk(PatchNode):
         else:
             return None
 
+    def allChildren(self):
+        "Return a list of all of the direct children of this node"
+        return self.changedLines
     def countchanges(self):
         """changedLines -> (n+,n-)"""
         add = len([l for l in self.changedLines if l.applied and l.prettyStr()[0] == '+'])
@@ -873,7 +882,7 @@ class CursesChunkSelector(object):
         """
         if item is None:
             item = self.currentSelectedItem
-    
+
         item.applied = not item.applied
 
         if isinstance(item, header):
@@ -888,7 +897,8 @@ class CursesChunkSelector(object):
                             hunkLine.applied = True
                 else:
                     # all children are off (but the header is on)
-                    item.partial = True
+                    if len(item.allChildren()) > 0:
+                        item.partial = True
             else:
                 # un-apply all its hunks
                 for hnk in item.hunks:
@@ -905,10 +915,10 @@ class CursesChunkSelector(object):
             siblingAppliedStatus = [hnk.applied for hnk in item.header.hunks]
             allSiblingsApplied = not (False in siblingAppliedStatus) 
             noSiblingsApplied = not (True in siblingAppliedStatus)
-        
+    
             siblingsPartialStatus = [hnk.partial for hnk in item.header.hunks]
             someSiblingsPartial = (True in siblingsPartialStatus)
-        
+    
             #cases where applied or partial should be removed from header
 
             # if no 'sibling' hunks are applied (including this hunk)
@@ -958,8 +968,14 @@ class CursesChunkSelector(object):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
             item = self.currentSelectedItem
-        if not isinstance(item, header) and foldParent:
-            item = item.parentItem()
+        if foldParent:
+            if not isinstance(item, header):
+                item = item.parentItem()
+            # also fold any foldable children of the parent/current item
+            if isinstance(item, header): # the original OR 'new' item
+                for child in item.allChildren():
+                    child.folded = not item.folded
+
             # we need to select the parent item in this case
             self.currentSelectedItem = item
 
@@ -1357,7 +1373,7 @@ The following are valid keystrokes:
         PgUp/PgDn [K/J] : go to previous/next item of same type
  Right/Left-arrow [l/h] : go to child item / parent item
                       f : fold / unfold item, hiding/revealing its children
-                      F : fold parent item
+                      F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
                       c : commit selected changes
                       q : quit without committing (no changes will be made)
