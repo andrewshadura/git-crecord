@@ -834,14 +834,20 @@ class CursesChunkSelector(object):
         "Scroll the screen in such a way to fully show the currently-selected item."
         selStart = self.selectedItemStartLine
         selEnd = self.selectedItemEndLine
+        #selNumLines = selEnd - selStart
         padStart = self.firstLineOfPadToPrint
         padEnd = padStart + self.yScreenSize - self.numStatusLines - 1
+        screenMiddleLine = self.yScreenSize / 2
+        # 'buffered' pad start/end values which scroll with a certain
+        # top/bottom context margin
+        padStartBuffered = padStart + 3
+        padEndBuffered = padEnd - 3
 
-        if selEnd > padEnd:
-            self.scrollLines(selEnd - padEnd)
-        elif selStart < padStart:
+        if selEnd > padEndBuffered:
+            self.scrollLines(selEnd - padEndBuffered)
+        elif selStart < padStartBuffered:
             # negative values scroll in pgup direction
-            self.scrollLines(selStart - padStart)
+            self.scrollLines(selStart - padStartBuffered)
 
 
     def scrollLines(self, numLines):
