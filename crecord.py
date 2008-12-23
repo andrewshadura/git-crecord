@@ -234,6 +234,8 @@ class header(PatchNode):
         # list of all headers in patch
         self.patch = None
 
+        # flag is False if this header was ever unfolded from initial state
+        self.neverUnfolded = True
     def binary(self):
         """
         Return True if the file represented by the header is a binary file.
@@ -976,10 +978,12 @@ class CursesChunkSelector(object):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
             item = self.currentSelectedItem
-        if foldParent:
+        if foldParent or (isinstance(item, header) and item.neverUnfolded):
             if not isinstance(item, header):
                 # we need to select the parent item in this case
                 self.currentSelectedItem = item = item.parentItem()
+            elif item.neverUnfolded:
+                item.neverUnfolded = False
             
             # also fold any foldable children of the parent/current item
             if isinstance(item, header): # the original OR 'new' item
