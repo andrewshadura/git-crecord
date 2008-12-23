@@ -1597,7 +1597,12 @@ def dorecord(ui, repo, committer, *pats, **opts):
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
-        chunks = filterpatch(opts, parsepatch(changes, fp))
+        if changes is not None:
+            chunks = filterpatch(opts, parsepatch(changes, fp))
+        else:
+            chgs = repo.status(match=match)[:3]
+            chunks = filterpatch(opts, parsepatch(chgs, fp))
+            
         del fp
 
         contenders = {}
