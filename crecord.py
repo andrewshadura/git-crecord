@@ -834,7 +834,7 @@ class CursesChunkSelector(object):
 
         # turn off folding if we want to show a child-item
         if currentItem.folded:
-            currentItem.folded = False
+            self.toggleFolded(currentItem)
 
         if nextItem is None:
             # if no next item on parent-level, then no change...
