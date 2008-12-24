@@ -845,14 +845,17 @@ class CursesChunkSelector(object):
     def leftArrowEvent(self):
         """
         Select (if possible) the parent of this item.
+        Otherwise, if this item is a header, then fold it.
 
         """
         currentItem = self.currentSelectedItem
         nextItem = currentItem.parentItem()
-
+        
         if nextItem is None:
-            # if no next item on parent-level, then no change...
+            # if no item on parent-level, then no change...
             nextItem = currentItem
+            if not nextItem.folded:
+                self.toggleFolded(item=nextItem)
 
         self.currentSelectedItem = nextItem
 
