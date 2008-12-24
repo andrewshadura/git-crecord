@@ -1480,7 +1480,8 @@ The following are valid keystrokes:
         # stupid hack to prevent getNumLinesDisplayed from failing
         self.chunkpad = curses.newpad(1,self.xScreenSize)
 
-        self.numPadLines = self.getNumLinesDisplayed(ignoreFolding=True)
+        # add 1 so to account for last line text reaching end of line
+        self.numPadLines = self.getNumLinesDisplayed(ignoreFolding=True) + 1
         self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
 
         # initialize selecteItemEndLine (initial start-line is 0)
