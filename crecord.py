@@ -1227,6 +1227,8 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="addition")
         elif lineStr.startswith("-"):
             colorPair = self.getColorPair(name="deletion")
+        elif lineStr.startswith("\\"):
+            colorPair = self.getColorPair(name="normal")
 
         linePrefix = " "*indentNumChars + checkBox
         outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
