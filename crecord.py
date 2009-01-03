@@ -12,10 +12,22 @@ from mercurial.i18n import gettext, _
 from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
 import copy, cStringIO, errno, operator, os, re, tempfile
-import curses
-import curses.textpad
 import signal
 import locale
+import platform
+if platform.system() == 'Windows':
+    # I have no idea if wcurses works with crecord...
+    import wcurses as curses
+    import curses.textpad
+else:
+    import curses
+    import curses.textpad
+
+try:
+    curses
+except NameError:
+    raise util.Abort(_('the python curses/wcurses module is not available/installed'))
+    
 
 # deal with unicode correctly
 locale.setlocale(locale.LC_ALL, '')
