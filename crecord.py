@@ -14,13 +14,13 @@ from mercurial import util
 import copy, cStringIO, errno, operator, os, re, tempfile
 import signal
 import locale
-import platform
-if platform.system() == 'Windows':
-    # I have no idea if wcurses works with crecord...
-    import wcurses as curses
+# os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
+if os.name == 'posix':
+    import curses
     import curses.textpad
 else:
-    import curses
+    # I have no idea if wcurses works with crecord...
+    import wcurses as curses
     import curses.textpad
 
 try:
