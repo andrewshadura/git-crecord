@@ -17,11 +17,11 @@ import locale
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':
     import curses
-    import curses.textpad
 else:
     # I have no idea if wcurses works with crecord...
     import wcurses as curses
-    import curses.textpad
+
+import curses.textpad
 
 try:
     curses
@@ -1009,7 +1009,7 @@ class CursesChunkSelector(object):
             item.folded = not item.folded
 
 
-    def alignString(self, inStr):
+    def alignString(self, inStr, window):
         """
         Add whitespace to the end of a string in order to make it fill
         the screen in the x direction.  The current cursor position is
@@ -1017,7 +1017,7 @@ class CursesChunkSelector(object):
         multiple lines.
 
         """
-        y,xStart = self.chunkpad.getyx()
+        y,xStart = window.getyx()
         width = self.xScreenSize
         # turn tabs into spaces
         inStr = inStr.expandtabs(4)
@@ -1025,7 +1025,8 @@ class CursesChunkSelector(object):
         numSpaces = (width - ((strLen + xStart) % width) - 1)
         return inStr + " " * numSpaces + "\n"
 
-    def printString(self, window, text, fgColor=None, bgColor=None, pair=None, pairName=None, attrList=None, toWin=True):
+    def printString(self, window, text, fgColor=None, bgColor=None, pair=None,
+        pairName=None, attrList=None, toWin=True, align=True, showWhtSpc=False):
         """
         Print the string, text, with the specified colors and attributes, to
         the specified curses window object.
@@ -1038,13 +1039,16 @@ class CursesChunkSelector(object):
         attrList is a list containing text attributes in the form of 
         curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
         UNDERLINE].
+        
+        If align == True, whitespace is added to the printed string such that
+        the string stretches to the right border of the window.
+        
+        If showWhtSpc == True, trailing whitespace of a string is highlighted.
 
         """
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
 
-        if not toWin: # if we shouldn't print to the window
-            return text
         if pair is not None:
             colorPair = pair
         elif pairName is not None:
@@ -1072,11 +1076,39 @@ class CursesChunkSelector(object):
                     colorPair |= textAttr
 
         y,xStart = self.chunkpad.getyx()
-        linesPrinted = (xStart + len(text)) / self.xScreenSize
-        window.addstr(text, colorPair)
+        t = "" # variable for counting lines printed
+        # if requested, show trailing whitespace
+        if showWhtSpc:
+            origLen = len(text)
+            text = text.rstrip(' \n') # tabs have already been expanded
+            strippedLen = len(text)
+            numTrailingSpaces = origLen - strippedLen
+        
+        if toWin:
+            window.addstr(text, colorPair)
+        t += text
+
+        if showWhtSpc:
+                wsColorPair = colorPair | curses.A_REVERSE
+                if toWin:
+                    for i in range(numTrailingSpaces):
+                        window.addch(curses.ACS_CKBOARD, wsColorPair)
+                t += " " * numTrailingSpaces
+        
+        if align:
+            if toWin:
+                extraWhiteSpace = self.alignString("", window)
+                window.addstr(extraWhiteSpace, colorPair)
+            else:
+                # need to use t, since the x position hasn't incremented
+                extraWhiteSpace = self.alignString(t, window)
+            t += extraWhiteSpace
+        
         # is reset to 0 at the beginning of printItem()
+        
+        linesPrinted = (xStart + len(t)) / self.xScreenSize
         self.linesPrintedToPadSoFar += linesPrinted
-        return text
+        return t
 
     def updateScreen(self):
         self.statuswin.erase()
@@ -1088,8 +1120,8 @@ class CursesChunkSelector(object):
 
         # print out the status lines at the top
         try:
-            printString(self.statuswin, alignString("SELECT CHUNKS: (j/k/up/down/pgup/pgdn) move cursor; (space) toggle applied"), pairName="legend")
-            printString(self.statuswin, alignString(" (f)old/unfold; (c)ommit applied; (q)uit; (?) help | [X]=hunk applied **=folded"), pairName="legend")
+            printString(self.statuswin, "SELECT CHUNKS: (j/k/up/down/pgup/pgdn) move cursor; (space) toggle applied", pairName="legend")
+            printString(self.statuswin, " (f)old/unfold; (c)ommit applied; (q)uit; (?) help | [X]=hunk applied **=folded", pairName="legend")
         except curses.error:
             pass
 
@@ -1149,7 +1181,7 @@ class CursesChunkSelector(object):
 
         if chunkIndex != 0 and not header.folded:
             # add separating line before headers
-            outStr += self.printString(self.chunkpad, '_'*self.xScreenSize, toWin=toWin)
+            outStr += self.printString(self.chunkpad, '_'*self.xScreenSize, toWin=toWin, align=False)
         # select color-pair based on if the header is selected
         if selected:
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
@@ -1166,12 +1198,12 @@ class CursesChunkSelector(object):
             lineStr = checkBox + textList[0]
         else:
             lineStr = checkBox + header.filename()
-        outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+        outStr += self.printString(self.chunkpad, lineStr, pair=colorPair, toWin=toWin)
         if not header.folded or ignoreFolding:
             if len(textList) > 1:
                 for line in textList[1:]:
                     lineStr = " "*(indentNumChars + len(checkBox)) + line
-                    outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+                    outStr += self.printString(self.chunkpad, lineStr, pair=colorPair, toWin=toWin)
 
         return outStr
 
@@ -1183,7 +1215,7 @@ class CursesChunkSelector(object):
 
         if hunkIndex != 0:
             # add separating line before headers
-            outStr += self.printString(self.chunkpad, ' '*self.xScreenSize, toWin=toWin)
+            outStr += self.printString(self.chunkpad, ' '*self.xScreenSize, toWin=toWin, align=False)
 
         if selected:
             colorPair = self.getColorPair(name="selected", attrList=[curses.A_BOLD])
@@ -1197,8 +1229,8 @@ class CursesChunkSelector(object):
         frToLine = "   " + hunk.getFromToLine().strip("\n")
 
 
-        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
-        outStr += self.printString(self.chunkpad, self.alignString(frToLine), pair=colorPair, toWin=toWin)
+        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin, align=False) # add uncolored checkbox/indent
+        outStr += self.printString(self.chunkpad, frToLine, pair=colorPair, toWin=toWin)
 
         if hunk.folded and not ignoreFolding:
             # skip remainder of output
@@ -1207,7 +1239,7 @@ class CursesChunkSelector(object):
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
             lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
-            outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
+            outStr += self.printString(self.chunkpad, lineStr, toWin=toWin)
 
         return outStr
 
@@ -1221,7 +1253,7 @@ class CursesChunkSelector(object):
         checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
             lineStr = " "*(indentNumChars + len(checkBox)) + line.strip("\n")
-            outStr += self.printString(self.chunkpad, self.alignString(lineStr), toWin=toWin)
+            outStr += self.printString(self.chunkpad, lineStr, toWin=toWin)
 
         return outStr
 
@@ -1243,8 +1275,8 @@ class CursesChunkSelector(object):
             colorPair = self.getColorPair(name="normal")
 
         linePrefix = " "*indentNumChars + checkBox
-        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin) # add uncolored checkbox/indent
-        outStr += self.printString(self.chunkpad, self.alignString(lineStr), pair=colorPair, toWin=toWin)
+        outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin, align=False) # add uncolored checkbox/indent
+        outStr += self.printString(self.chunkpad, lineStr, pair=colorPair, toWin=toWin, showWhtSpc=True)
         return outStr
 
     def printItem(self, item=None, ignoreFolding=False, recurseChildren=True, toWin=True):
@@ -1424,7 +1456,7 @@ The following are valid keystrokes:
         helpLines = helpLines + [" "]*(self.yScreenSize-self.numStatusLines-len(helpLines)-1)
         try:
             for line in helpLines:
-                self.printString(helpwin, self.alignString(line), pairName="legend")
+                self.printString(helpwin, line, pairName="legend")
         except curses.error:
             pass
         helpwin.refresh()
@@ -1444,7 +1476,7 @@ The following are valid keystrokes:
                 return key
         statusline = curses.newwin(2,0,0,0)
         statusLineText = "  Begin/resume editing of commit message.  CTRL-X returns to patch view."
-        self.printString(statusline, self.alignString(statusLineText), pairName="legend")
+        self.printString(statusline, statusLineText, pairName="legend")
         statusline.refresh()
         helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
         reversedCommentText = self.commentText[::-1]
@@ -1459,7 +1491,7 @@ The following are valid keystrokes:
 
         confirmWin = curses.newwin(self.yScreenSize,0,0,0)
         try:
-            self.printString(confirmWin, self.alignString(confirmText), pairName="selected")
+            self.printString(confirmWin, confirmText, pairName="selected")
         except curses.error:
             pass
         confirmWin.refresh()
