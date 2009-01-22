@@ -1470,12 +1470,13 @@ The following are valid keystrokes:
             if key in (7,):
                 # diable keys we're re-mapping
                 return ""
-            elif key == 24: # CTRL-X
+            elif key in (24, 3): # CTRL-X,  3 = CTRL-C
                 return 7 # CTRL-G (i.e. exit comment window)
             else:
                 return key
         statusline = curses.newwin(2,0,0,0)
-        statusLineText = "  Begin/resume editing of commit message.  CTRL-X returns to patch view."
+        statusLineText = \
+        " Begin/resume editing commit message. CTRL-C/-X returns to patch view."
         self.printString(statusline, statusLineText, pairName="legend")
         statusline.refresh()
         helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
@@ -1483,7 +1484,9 @@ The following are valid keystrokes:
         for char in reversedCommentText:
             curses.ungetch(ord(char))
         t = curses.textpad.Textbox(helpwin)
+        curses.raw()
         self.commentText = t.edit(keyFilter).rstrip(" \n")
+        curses.cbreak()
 
     def confirmCommit(self):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
