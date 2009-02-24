@@ -197,11 +197,20 @@ class CursesChunkSelector(object):
 
     def leftArrowEvent(self):
         """
-        Select (if possible) the parent of this item.
-        Otherwise, if this item is a header, then fold it.
+        If the current item can be folded (i.e. it is an unfolded header or
+        hunk), then fold it.  Otherwise try select (if possible) the parent
+        of this item.
 
         """
         currentItem = self.currentSelectedItem
+        
+        # try to fold the item
+        if not isinstance(currentItem, HunkLine):
+            if not currentItem.folded:
+                self.toggleFolded(item=currentItem)
+                return
+        
+        # if it can't be folded, try to select the parent item
         nextItem = currentItem.parentItem()
         
         if nextItem is None:
