@@ -1,6 +1,6 @@
 from mercurial.i18n import gettext, _
 from mercurial import cmdutil, commands, extensions, hg, mdiff
-from mercurial import util
+from mercurial import util, encoding
 import copy, cStringIO, errno, operator, os, re, tempfile
 
 
@@ -371,7 +371,7 @@ class CursesChunkSelector(object):
         width = self.xScreenSize
         # turn tabs into spaces
         inStr = inStr.expandtabs(4)
-        strLen = len(unicode(util.fromlocal(inStr), 'utf-8'))
+        strLen = len(unicode(encoding.fromlocal(inStr), 'utf-8'))
         numSpaces = (width - ((strLen + xStart) % width) - 1)
         return inStr + " " * numSpaces + "\n"
 
