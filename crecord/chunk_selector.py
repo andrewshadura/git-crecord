@@ -1,6 +1,16 @@
 from mercurial.i18n import gettext, _
 from mercurial import cmdutil, commands, extensions, hg, mdiff
-from mercurial import util, encoding
+from mercurial import util
+
+# accomodate older versions where encoding module doesn't yet exist
+from mercurial import demandimport
+demandimport.ignore.append('mercurial.encoding')
+try:
+    import mercurial.encoding as encoding
+except:
+    encoding = util
+
+
 import copy, cStringIO, errno, operator, os, re, tempfile
 
 
