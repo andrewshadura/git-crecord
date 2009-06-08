@@ -7,7 +7,7 @@ from mercurial import demandimport
 demandimport.ignore.append('mercurial.encoding')
 try:
     import mercurial.encoding as encoding
-except:
+except ImportError:
     encoding = util
 
 
@@ -35,6 +35,7 @@ except NameError:
 
 # deal with unicode correctly
 locale.setlocale(locale.LC_ALL, '')
+code = locale.getpreferredencoding()
 
 def chunkselector(opts, headerList):
     """
@@ -381,7 +382,7 @@ class CursesChunkSelector(object):
         width = self.xScreenSize
         # turn tabs into spaces
         inStr = inStr.expandtabs(4)
-        strLen = len(unicode(encoding.fromlocal(inStr), 'utf-8'))
+        strLen = len(unicode(encoding.fromlocal(inStr), code))
         numSpaces = (width - ((strLen + xStart) % width) - 1)
         return inStr + " " * numSpaces + "\n"
 
