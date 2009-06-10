@@ -906,10 +906,6 @@ The following are valid keystrokes:
         except KeyError:
             pass
 
-
-        #import rpdb2; rpdb2.start_embedded_debugger("secret")
-        #import rpdb2; rpdb2.setbreak()
-
         while True:
             self.updateScreen()
             self.lastKeyPressed = keyPressed = stdscr.getch()
