@@ -887,6 +887,7 @@ The following are valid keystrokes:
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numStatusLines,0,0,0)
+        self.statuswin.keypad(1) # interpret arrow-key, etc. ESC sequences
 
         # figure out how much space to allocate for the chunk-pad which is
         # used for displaying the patch
@@ -908,33 +909,37 @@ The following are valid keystrokes:
 
         while True:
             self.updateScreen()
-            self.lastKeyPressed = keyPressed = stdscr.getch()
-            if keyPressed in [ord("k"), curses.KEY_UP]:
+            try:
+                keyPressed = self.statuswin.getkey()
+            except curses.error:
+                keyPressed = "FOOBAR"
+
+            if keyPressed in ["k", "KEY_UP"]:
                 self.upArrowEvent()
-            if keyPressed in [ord("K"), curses.KEY_PPAGE]:
+            if keyPressed in ["K", "KEY_PPAGE"]:
                 self.upArrowShiftEvent()
-            elif keyPressed in [ord("j"), curses.KEY_DOWN]:
+            elif keyPressed in ["j", "KEY_DOWN"]:
                 self.downArrowEvent()
-            elif keyPressed in [ord("J"), curses.KEY_NPAGE]:
+            elif keyPressed in ["J", "KEY_NPAGE"]:
                 self.downArrowShiftEvent()
-            elif keyPressed in [ord("l"), curses.KEY_RIGHT]:
+            elif keyPressed in ["l", "KEY_RIGHT"]:
                 self.rightArrowEvent()
-            elif keyPressed in [ord("h"), curses.KEY_LEFT]:
+            elif keyPressed in ["h", "KEY_LEFT"]:
                 self.leftArrowEvent()
-            elif keyPressed in [ord("q")]:
+            elif keyPressed in ["q"]:
                 raise util.Abort(_('user quit'))
-            elif keyPressed in [ord("c")]:
+            elif keyPressed in ["c"]:
                 if self.confirmCommit():
                     break
-            elif keyPressed in [ord(' ')]:
+            elif keyPressed in [' ']:
                 self.toggleApply()
-            elif keyPressed in [ord("f")]:
+            elif keyPressed in ["f"]:
                 self.toggleFolded()
-            elif keyPressed in [ord("F")]:
+            elif keyPressed in ["F"]:
                 self.toggleFolded(foldParent=True)
-            elif keyPressed in [ord("?")]:
+            elif keyPressed in ["?"]:
                 self.helpWindow()
-            elif keyPressed in [ord("m")]:
+            elif keyPressed in ["m"]:
                 self.commitMessageWindow()
 
         if self.commentText != "":
