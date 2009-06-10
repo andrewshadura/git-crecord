@@ -12,6 +12,7 @@ except ImportError:
 
 
 import copy, cStringIO, errno, operator, os, re, tempfile
+import sys, fcntl, struct, termios
 
 
 import signal
@@ -37,15 +38,28 @@ except NameError:
 locale.setlocale(locale.LC_ALL, '')
 code = locale.getpreferredencoding()
 
+orig_stdout = sys.__stdout__ # used by gethw()
+
+def gethw():
+    """
+    Magically get the current height and width of the window (without initscr)
+
+    This is a rip-off of a rip-off - taken from the bpython code.  It is
+    useful / necessary because otherwise curses.initscr() must be called, 
+    which can leave the terminal in a nasty state after exiting.
+
+    """
+    h, w = struct.unpack(
+        "hhhh", fcntl.ioctl(orig_stdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
+    return h, w
+
+
 def chunkselector(opts, headerList):
     """
     Curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
 
     """
-    stdscr = curses.initscr()
-    curses.start_color()
-
     chunkSelector = CursesChunkSelector(headerList)
     curses.wrapper(chunkSelector.main, opts)
 
@@ -730,10 +744,10 @@ class CursesChunkSelector(object):
         "Handle window resizing"
         try:
             curses.endwin()
-            self.stdscr = curses.initscr()
-            self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
-
-            self.statuswin = curses.newwin(self.numStatusLines,self.xScreenSize,0,0)
+            self.yScreenSize, self.xScreenSize = gethw()
+            self.statuswin.resize(self.numStatusLines,self.xScreenSize)
+            self.chunkpad.resize(self.yScreenSize-self.numStatusLines,self.xScreenSize)
+            # TODO: try to resize commit message window if possible
         except curses.error:
             pass
             # TODO: make resizing to a smaller width work (also for help screen)
@@ -822,7 +836,10 @@ The following are valid keystrokes:
         except curses.error:
             pass
         helpwin.refresh()
-        self.stdscr.getch()
+        try:
+            helpwin.getkey()
+        except curses.error:
+            pass
 
     def commitMessageWindow(self):
         "Create a temporary commit message editing window on the screen."
@@ -877,7 +894,8 @@ The following are valid keystrokes:
         signal.signal(signal.SIGWINCH, self.sigwinchHandler)
         self.stdscr = stdscr
         self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
-
+ 
+        curses.start_color()
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="normal")
