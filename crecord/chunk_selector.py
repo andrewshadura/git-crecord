@@ -746,15 +746,11 @@ class CursesChunkSelector(object):
             curses.endwin()
             self.yScreenSize, self.xScreenSize = gethw()
             self.statuswin.resize(self.numStatusLines,self.xScreenSize)
-            self.chunkpad.resize(self.yScreenSize-self.numStatusLines,self.xScreenSize)
+            self.numPadLines = self.getNumLinesDisplayed(ignoreFolding=True) + 1
+            self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
             # TODO: try to resize commit message window if possible
         except curses.error:
             pass
-            # TODO: make resizing to a smaller width work (also for help screen)
-            # re-calculate an upper-bound on the number of lines in the pad
-            #self.numPadLines = self.getNumLinesDisplayed()
-            #self.chunkpad = curses.newpad(self.numPadLines, self.xScreenSize)
-            #self.updateScreen()
 
     def getColorPair(self, fgColor=None, bgColor=None, name=None, attrList=None):
         """
