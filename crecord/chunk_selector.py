@@ -26,7 +26,8 @@ else:
     # I have no idea if wcurses works with crecord...
     import wcurses as curses
 
-import curses.textpad
+#from curses import textpad 
+import textpad # customized textpad
 
 try:
     curses
@@ -855,12 +856,9 @@ The following are valid keystrokes:
         self.printString(statusline, statusLineText, pairName="legend")
         statusline.refresh()
         helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
-        reversedCommentText = self.commentText[::-1]
-        for char in reversedCommentText:
-            curses.ungetch(ord(char))
-        t = curses.textpad.Textbox(helpwin)
+        t = textpad.Textbox(helpwin)
         curses.raw()
-        self.commentText = t.edit(keyFilter).rstrip(" \n")
+        self.commentText = t.edit(keyFilter, self.commentText).rstrip(" \n")
         curses.cbreak()
 
     def confirmCommit(self):
