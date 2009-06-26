@@ -61,6 +61,7 @@ def chunkselector(opts, headerList):
     of the chosen chunks.
 
     """
+
     chunkSelector = CursesChunkSelector(headerList)
     curses.wrapper(chunkSelector.main, opts)
 
@@ -870,6 +871,7 @@ The following are valid keystrokes:
             self.printString(confirmWin, confirmText, pairName="selected")
         except curses.error:
             pass
+        self.stdscr.refresh()
         confirmWin.refresh()
         try:
             response = chr(self.stdscr.getch())
@@ -888,8 +890,7 @@ The following are valid keystrokes:
         signal.signal(signal.SIGWINCH, self.sigwinchHandler)
         self.stdscr = stdscr
         self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
- 
-        curses.start_color()
+
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="normal")
