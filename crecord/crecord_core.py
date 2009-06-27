@@ -51,7 +51,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
             chunks = filterpatch(opts, parsepatch(changes, fp), chunkselector)
         else:
             chgs = repo.status(match=match)[:3]
-            chunks = filterpatch(opts, parsepatch(chgs, fp))
+            chunks = filterpatch(opts, parsepatch(chgs, fp), chunkselector)
             
         del fp
 
