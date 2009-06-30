@@ -425,6 +425,9 @@ class CursesChunkSelector(object):
         """
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
+        # Strip \n, and convert control characters to ^[char] representation
+        text = re.sub(r'[\x00-\x08\x0a-\x1f]',
+                lambda m:'^'+chr(ord(m.group())+64), text.strip('\n'))
 
         if pair is not None:
             colorPair = pair
@@ -615,7 +618,7 @@ class CursesChunkSelector(object):
 
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
-            lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line.strip("\n")
+            lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line
             outStr += self.printString(self.chunkpad, lineStr, toWin=toWin)
 
         return outStr
@@ -629,7 +632,7 @@ class CursesChunkSelector(object):
         # a bit superfluous, but to avoid hard-coding indent amount
         checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
-            lineStr = " "*(indentNumChars + len(checkBox)) + line.strip("\n")
+            lineStr = " "*(indentNumChars + len(checkBox)) + line
             outStr += self.printString(self.chunkpad, lineStr, toWin=toWin)
 
         return outStr
