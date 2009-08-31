@@ -13,8 +13,8 @@ from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
 import cStringIO, errno, os, re, tempfile
 
-from crpatch import parsepatch, filterpatch
-from chunk_selector import chunkselector
+import crpatch
+import chunk_selector
 
 def dorecord(ui, repo, committer, *pats, **opts):
     if not ui.interactive:
@@ -48,11 +48,15 @@ def dorecord(ui, repo, committer, *pats, **opts):
 
         # 1. filter patch, so we have intending-to apply subset of it
         if changes is not None:
-            chunks = filterpatch(opts, parsepatch(changes, fp), chunkselector)
+            chunks = crpatch.filterpatch(opts,
+                                         crpatch.parsepatch(changes, fp),
+                                         chunk_selector.chunkselector)
         else:
             chgs = repo.status(match=match)[:3]
-            chunks = filterpatch(opts, parsepatch(chgs, fp), chunkselector)
-            
+            chunks = crpatch.filterpatch(opts,
+                                         crpatch.parsepatch(chgs, fp),
+                                         chunk_selector.chunkselector)
+
         del fp
 
         contenders = {}
