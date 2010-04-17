@@ -1,5 +1,4 @@
-from mercurial.i18n import gettext, _
-from mercurial import cmdutil, commands, extensions, hg, mdiff
+from mercurial.i18n import _
 from mercurial import util
 
 # accomodate older versions where encoding module doesn't yet exist
@@ -10,13 +9,15 @@ try:
 except ImportError:
     encoding = util
 
-
-import copy, cStringIO, errno, operator, os, re, tempfile
-import sys, fcntl, struct, termios
-
-
+import os
+import re
+import sys
+import fcntl
+import struct
+import termios
 import signal
 import locale
+
 from crpatch import Patch, header, hunk, HunkLine
 
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'

@@ -11,7 +11,10 @@
 from mercurial.i18n import _
 from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
-import cStringIO, errno, os, re, tempfile
+import cStringIO
+import errno
+import os
+import tempfile
 
 import crpatch
 import chunk_selector
