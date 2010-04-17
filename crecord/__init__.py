@@ -30,14 +30,23 @@ def extsetup():
     except KeyError:
         return
 
-    qcmdtable = {
-    "qcrecord":
-        (qcrecord,
+    try:
+        qcmdtable = {
+        "qcrecord":
+            (qcrecord,
 
-         # add qnew options, except '--force'
-         [opt for opt in mq.cmdtable['qnew'][1] if opt[1] != 'force'],
+             # add qnew options, except '--force'
+             [opt for opt in mq.cmdtable['^qnew'][1] if opt[1] != 'force'],
 
-         _('hg qcrecord [OPTION]... PATCH [FILE]...')),
-    }
+             _('hg qcrecord [OPTION]... PATCH [FILE]...')),
+        }
+    except KeyError:
+        # backwards compatible with pre 301633755dec
+        qcmdtable = {
+        "qcrecord":
+            (qcrecord,
+             [opt for opt in mq.cmdtable['qnew'][1] if opt[1] != 'force'],
+             _('hg qcrecord [OPTION]... PATCH [FILE]...')),
+        }
 
     cmdtable.update(qcmdtable)
