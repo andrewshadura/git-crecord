@@ -826,6 +826,7 @@ The following are valid keystrokes:
                       F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
                       c : commit selected changes
+                      r : review/edit and commit selected changes
                       q : quit without committing (no changes will be made)
                       ? : help (what you're currently reading)"""
 
@@ -866,13 +867,24 @@ The following are valid keystrokes:
         self.commentText = t.edit(keyFilter, self.commentText).rstrip(" \n")
         curses.cbreak()
 
-    def confirmCommit(self):
+    def confirmCommit(self, review=False):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
-        confirmText = "Are you sure you want to commit the selected changes [yN]? "
+        if review:
+            confirmText = \
+"""If you answer yes to the following, the your currently chosen patch chunks
+will be loaded into an editor.  You may modify the patch from the editor, and
+save the changes if you wish to change the patch.  Otherwise, you can just
+close the editor without saving to accept the current patch as-is.
+
+Are you sure you want to review/edit and commit the selected changes [yN]? """
+        else:
+            confirmText = "Are you sure you want to commit the selected changes [yN]? "
 
         confirmWin = curses.newwin(self.yScreenSize,0,0,0)
         try:
-            self.printString(confirmWin, confirmText, pairName="selected")
+            lines = confirmText.split("\n")
+            for line in lines:
+                self.printString(confirmWin, line, pairName="selected")
         except curses.error:
             pass
         self.stdscr.refresh()
@@ -918,6 +930,9 @@ The following are valid keystrokes:
 
         # initialize selecteItemEndLine (initial start-line is 0)
         self.selectedItemEndLine = self.getNumLinesDisplayed(self.currentSelectedItem, recurseChildren=False)
+        
+        # option which enables/disables patch-review (in editor) step
+        opts['crecord_reviewpatch'] = False 
 
         try:
             self.commentText = opts['message']
@@ -947,6 +962,10 @@ The following are valid keystrokes:
                 raise util.Abort(_('user quit'))
             elif keyPressed in ["c"]:
                 if self.confirmCommit():
+                    break
+            elif keyPressed in ["r"]:
+                if self.confirmCommit(review=True):
+                    opts['crecord_reviewpatch'] = True
                     break
             elif keyPressed in [' ']:
                 self.toggleApply()

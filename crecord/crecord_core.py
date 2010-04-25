@@ -105,6 +105,14 @@ def dorecord(ui, repo, committer, *pats, **opts):
             dopatch = fp.tell()
             fp.seek(0)
 
+            # 2.5 optionally review / modify patch in text editor
+            if opts['crecord_reviewpatch']:
+                patchtext = fp.read()
+                reviewedpatch = ui.edit(patchtext, "")
+                fp.truncate(0)
+                fp.write(reviewedpatch)
+                fp.seek(0)
+
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
                 hg.revert(repo, repo.dirstate.parents()[0], backups.has_key)
