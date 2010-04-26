@@ -19,7 +19,7 @@ import tempfile
 import crpatch
 import chunk_selector
 
-def dorecord(ui, repo, committer, *pats, **opts):
+def dorecord(ui, repo, commitfunc, *pats, **opts):
     if not ui.interactive:
         raise util.Abort(_('running non-interactively, use commit instead'))
 
@@ -139,7 +139,7 @@ def dorecord(ui, repo, committer, *pats, **opts):
             cwd = os.getcwd()
             os.chdir(repo.root)
             try:
-                committer(ui, repo, newfiles, opts)
+                commitfunc(ui, repo, *newfiles, **opts)
             finally:
                 os.chdir(cwd)
 
@@ -171,9 +171,7 @@ def crecord(ui, repo, *pats, **opts):
     those you would like to apply to the commit.
 
     '''
-    def record_committer(ui, repo, pats, opts):
-        commands.commit(ui, repo, *pats, **opts)
-    dorecord(ui, repo, record_committer, *pats, **opts)
+    dorecord(ui, repo, commands.commit, *pats, **opts)
 
 
 def qcrecord(ui, repo, patch, *pats, **opts):
@@ -187,9 +185,9 @@ def qcrecord(ui, repo, patch, *pats, **opts):
     except KeyError:
         raise util.Abort(_("'mq' extension not loaded"))
 
-    def qrecord_committer(ui, repo, pats, opts):
+    def committomq(ui, repo, *pats, **opts):
         mq.new(ui, repo, patch, *pats, **opts)
 
     opts = opts.copy()
     opts['force'] = True    # always 'qnew -f'
-    dorecord(ui, repo, qrecord_committer, *pats, **opts)
+    dorecord(ui, repo, committomq, *pats, **opts)
