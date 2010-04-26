@@ -26,6 +26,12 @@ cmdtable = {
 
 def extsetup():
     try:
+        keyword = extensions.find('keyword')
+        keyword.restricted += ' crecord qcrecord'
+    except KeyError:
+        pass
+
+    try:
         mq = extensions.find('mq')
     except KeyError:
         return
