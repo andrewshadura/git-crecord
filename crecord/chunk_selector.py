@@ -6,8 +6,10 @@ from mercurial import demandimport
 demandimport.ignore.append('mercurial.encoding')
 try:
     import mercurial.encoding as encoding
+    code = encoding.encoding
 except ImportError:
     encoding = util
+    code = encoding._encoding
 
 import os
 import re
@@ -16,7 +18,6 @@ import fcntl
 import struct
 import termios
 import signal
-import locale
 
 from crpatch import Patch, header, hunk, HunkLine
 
@@ -35,10 +36,6 @@ try:
 except NameError:
     raise util.Abort(_('the python curses/wcurses module is not available/installed'))
     
-
-# deal with unicode correctly
-locale.setlocale(locale.LC_ALL, '')
-code = locale.getpreferredencoding()
 
 orig_stdout = sys.__stdout__ # used by gethw()
 
@@ -399,7 +396,12 @@ class CursesChunkSelector(object):
         width = self.xScreenSize
         # turn tabs into spaces
         inStr = inStr.expandtabs(4)
-        strLen = len(unicode(encoding.fromlocal(inStr), code))
+        try:
+            strLen = len(unicode(encoding.fromlocal(inStr), code))
+        except:
+            # if text is not utf8, then assume an 8-bit single-byte encoding.
+            strLen = len(inStr)
+
         numSpaces = (width - ((strLen + xStart) % width) - 1)
         return inStr + " " * numSpaces + "\n"
 
