@@ -62,6 +62,11 @@ def extsetup():
     try:
         keyword = extensions.find('keyword')
         keyword.restricted += ' crecord qcrecord'
+        try:
+            keyword.recordextensions += ' crecord'
+            keyword.recordcommands += ' crecord qcrecord'
+        except AttributeError:
+            pass
     except KeyError:
         pass
 
