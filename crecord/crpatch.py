@@ -539,6 +539,7 @@ def parsepatch(changes, fp):
             self.toline += len(self.before) + h.added
             self.before = []
             self.changedlines = []
+            self.context = []
             self.proc = ''
 
         def _context(self, context):
