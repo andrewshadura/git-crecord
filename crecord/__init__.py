@@ -24,7 +24,8 @@ def crecord(ui, repo, *pats, **opts):
     You will be shown a list of patch hunks from which you can select
     those you would like to apply to the commit.
 
-    '''
+    This command is not available when committing a merge.'''
+
     dorecord(ui, repo, commands.commit, *pats, **opts)
 
 

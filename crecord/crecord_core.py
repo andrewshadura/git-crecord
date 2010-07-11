@@ -36,6 +36,12 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
         """
+
+        merge = len(repo[None].parents()) > 1
+        if merge:
+            raise util.Abort(_('cannot partially commit a merge '
+                               '(use hg commit instead)'))
+
         if match.files():
             changes = None
         else:
