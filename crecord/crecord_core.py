@@ -26,14 +26,14 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
-        It's job is to interactively filter local changes, and accordingly
+        Its job is to interactively filter local changes, and accordingly
         prepare working dir into a state, where the job can be delegated to
         non-interactive commit command such as 'commit' or 'qrefresh'.
 
         After the actual job is done by non-interactive command, working dir
         state is restored to original.
 
-        In the end we'll record intresting changes, and everything else will be
+        In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
         """
         if match.files():
