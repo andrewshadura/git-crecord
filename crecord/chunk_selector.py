@@ -438,9 +438,9 @@ class CursesChunkSelector(object):
             colorPair = self.colorPairNames[pairName]
         else:
             if fgColor is None:
-                fgColor = curses.COLOR_WHITE
+                fgColor = -1
             if bgColor is None:
-                bgColor = curses.COLOR_BLACK
+                bgColor = -1
             if self.colorPairs.has_key((fgColor,bgColor)):
                 colorPair = self.colorPairs[(fgColor,bgColor)]
             else:
@@ -780,9 +780,9 @@ class CursesChunkSelector(object):
             colorPair = self.colorPairNames[name]
         else:
             if fgColor is None:
-                fgColor = curses.COLOR_WHITE
+                fgColor = -1
             if bgColor is None:
-                bgColor = curses.COLOR_BLACK
+                bgColor = -1
             if self.colorPairs.has_key((fgColor,bgColor)):
                 colorPair = self.colorPairs[(fgColor,bgColor)]
             else:
@@ -909,12 +909,15 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """
         self.stdscr = stdscr
         self.yScreenSize, self.xScreenSize = self.stdscr.getmaxyx()
 
+        curses.start_color()
+        curses.use_default_colors()
+
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
-        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLACK, name="normal")
-        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_RED, name="selected")
-        self.initColorPair(curses.COLOR_RED, curses.COLOR_BLACK, name="deletion")
-        self.initColorPair(curses.COLOR_GREEN, curses.COLOR_BLACK, name="addition")
+        self.initColorPair(None, None, name="normal")
+        self.initColorPair(curses.COLOR_WHITE, curses.COLOR_MAGENTA, name="selected")
+        self.initColorPair(curses.COLOR_RED, None, name="deletion")
+        self.initColorPair(curses.COLOR_GREEN, None, name="addition")
         self.initColorPair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numStatusLines,0,0,0)
