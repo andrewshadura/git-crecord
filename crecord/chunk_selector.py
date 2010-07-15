@@ -896,6 +896,9 @@ will be loaded into an editor.  You may modify the patch from the editor, and
 save the changes if you wish to change the patch.  Otherwise, you can just
 close the editor without saving to accept the current patch as-is.
 
+NOTE: don't add/remove lines unless you also modify the range information.
+      Failing to follow this rule will result in the commit aborting.
+
 Are you sure you want to review/edit and commit the selected changes [yN]? """
         else:
             confirmText = "Are you sure you want to commit the selected changes [yN]? "
