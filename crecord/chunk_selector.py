@@ -111,6 +111,9 @@ class CursesChunkSelector(object):
         # stores optional text for a commit comment provided by the user
         self.commentText = ""
 
+        # if the last 'toggle all' command caused all changes to be applied
+        self.wasLastToggleAllApplied = True
+
     def upArrowEvent(self):
         """
         Try to select the previous item to the current item that has the
@@ -365,6 +368,19 @@ class CursesChunkSelector(object):
                 item.hunk.header.applied = True
                 item.hunk.header.partial = (someParentSiblingsPartial or \
                                             not allParentSiblingsApplied)
+
+    def toggleAll(self):
+        "Toggle the applied flag of all items."
+        if self.wasLastToggleAllApplied: # then unapply them this time
+            for item in self.headerList:
+                if item.applied:
+                    self.toggleApply(item)
+        else:
+            for item in self.headerList:
+                if not item.applied:
+                    self.toggleApply(item)
+        self.wasLastToggleAllApplied = not self.wasLastToggleAllApplied
+
     def toggleFolded(self, item=None, foldParent=False):
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
@@ -504,7 +520,7 @@ class CursesChunkSelector(object):
 
         # print out the status lines at the top
         try:
-            printString(self.statuswin, "SELECT CHUNKS: (j/k/up/down/pgup/pgdn) move cursor; (space) toggle applied", pairName="legend")
+            printString(self.statuswin, "SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; (space/A) toggle hunk/all", pairName="legend")
             printString(self.statuswin, " (f)old/unfold; (c)ommit applied; (q)uit; (?) help | [X]=hunk applied **=folded", pairName="legend")
         except curses.error:
             pass
@@ -822,6 +838,7 @@ can use crecord multiple times to split large changes into smaller changesets.
 The following are valid keystrokes:
 
                 [SPACE] : (un-)select item ([~]/[X] = partly/fully applied)
+                      A : (un-)select all items
     Up/Down-arrow [k/j] : go to previous/next unfolded item
         PgUp/PgDn [K/J] : go to previous/next item of same type
  Right/Left-arrow [l/h] : go to child item / parent item
@@ -975,6 +992,8 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """
                     break
             elif keyPressed in [' ']:
                 self.toggleApply()
+            elif keyPressed in ['A']:
+                self.toggleAll()
             elif keyPressed in ["f"]:
                 self.toggleFolded()
             elif keyPressed in ["F"]:
