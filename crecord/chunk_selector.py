@@ -303,6 +303,7 @@ class CursesChunkSelector(object):
                 # un-apply all its hunks
                 for hnk in item.hunks:
                     hnk.applied = False
+                    hnk.partial = False
                     # un-apply all their HunkLines
                     for hunkLine in hnk.changedLines:
                         hunkLine.applied = False
