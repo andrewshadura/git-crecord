@@ -245,7 +245,7 @@ class uiheader(patchnode):
             if h.startswith('---'):
                 fp.write(_('%d hunks, %d lines changed\n') %
                          (len(self.hunks),
-                          sum([h.added + h.removed for h in self.hunks])))
+                          sum([max(h.added, h.removed) for h in self.hunks])))
                 break
             fp.write(h)
 
