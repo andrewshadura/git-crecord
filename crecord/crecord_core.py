@@ -20,8 +20,12 @@ import crpatch
 import chunk_selector
 
 def dorecord(ui, repo, commitfunc, *pats, **opts):
-    if not ui.interactive():
-        raise util.Abort(_('running non-interactively, use commit instead'))
+    try:
+        if not ui.interactive():
+            raise util.Abort(_('running non-interactively, use commit instead'))
+    except TypeError: # backwards compatibility with hg 1.1
+        if not ui.interactive:
+            raise util.Abort(_('running non-interactively, use commit instead'))
 
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
@@ -117,8 +121,11 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
                     pfiles = {}
-                    patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
-                                        eolmode=None)
+                    try:
+                        patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
+                                            eolmode=None)
+                    except TypeError:  # backwards compatilibity with hg 1.1
+                        patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
                     patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
