@@ -16,10 +16,10 @@ from crecord_core import dorecord
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit
 
-    If a list of files is omitted, all changes reported by "hg status"
+    If a list of files is omitted, all changes reported by :hg:`status`
     will be candidates for recording.
 
-    See "hg help dates" for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
 
     You will be shown a list of patch hunks from which you can select
     those you would like to apply to the commit.
@@ -32,7 +32,9 @@ def crecord(ui, repo, *pats, **opts):
 def qcrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
 
-    See "hg help qnew" & "hg help record" for more information and usage.'''
+    See :hg:`help qnew` & :hg:`help crecord` for more information and
+    usage.
+    '''
 
     try:
         mq = extensions.find('mq')

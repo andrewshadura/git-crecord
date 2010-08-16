@@ -20,7 +20,7 @@ import crpatch
 import chunk_selector
 
 def dorecord(ui, repo, commitfunc, *pats, **opts):
-    if not ui.interactive:
+    if not ui.interactive():
         raise util.Abort(_('running non-interactively, use commit instead'))
 
     def recordfunc(ui, repo, message, match, opts):
@@ -42,47 +42,34 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             raise util.Abort(_('cannot partially commit a merge '
                                '(use hg commit instead)'))
 
-        if match.files():
-            changes = None
-        else:
-            changes = repo.status(match=match)[:3]
-            modified, added, removed = changes
-            match = cmdutil.matchfiles(repo, modified + added + removed)
+        changes = repo.status(match=match)[:3]
         diffopts = mdiff.diffopts(git=True, nodates=True)
-        chunks = patch.diff(repo, repo.dirstate.parents()[0], match=match,
-                            changes=changes, opts=diffopts)
+        chunks = patch.diff(repo, changes=changes, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
-        if changes is not None:
-            chunks = crpatch.filterpatch(opts,
-                                         crpatch.parsepatch(changes, fp),
-                                         chunk_selector.chunkselector)
-        else:
-            chgs = repo.status(match=match)[:3]
-            chunks = crpatch.filterpatch(opts,
-                                         crpatch.parsepatch(chgs, fp),
-                                         chunk_selector.chunkselector)
-
+        chunks = crpatch.filterpatch(opts,
+                                     crpatch.parsepatch(changes, fp),
+                                     chunk_selector.chunkselector)
         del fp
 
-        contenders = {}
+        contenders = set()
         for h in chunks:
-            try: contenders.update(dict.fromkeys(h.files()))
-            except AttributeError: pass
+            try:
+                contenders.update(set(h.files()))
+            except AttributeError:
+                pass
 
-        newfiles = [f for f in match.files() if f in contenders]
+        changed = changes[0] + changes[1] + changes[2]
+        newfiles = [f for f in changed if f in contenders]
 
         if not newfiles:
             ui.status(_('no changes to record\n'))
             return 0
 
-        if changes is None:
-            match = cmdutil.matchfiles(repo, newfiles)
-            changes = repo.status(match=match)
-        modified = dict.fromkeys(changes[0])
+        modified = set(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
         backups = {}
@@ -121,14 +108,18 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
-                hg.revert(repo, repo.dirstate.parents()[0], backups.has_key)
+                hg.revert(repo, repo.dirstate.parents()[0],
+                          lambda key: key in backups)
 
             # 3b. (apply)
             if dopatch:
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    patch.internalpatch(fp, ui, 1, repo.root)
+                    pfiles = {}
+                    patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
+                                        eolmode=None)
+                    patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
                     if s:
