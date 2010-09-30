@@ -126,7 +126,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                             eolmode=None)
                     except TypeError:  # backwards compatilibity with hg 1.1
                         patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
-                    patch.updatedir(ui, repo, pfiles)
+                    try:
+                        cmdutil.updatedir(ui, repo, pfiles)
+                    except AttributeError:
+                        patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
                     if s:
