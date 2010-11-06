@@ -59,7 +59,9 @@ def scanpatch(fp):
                 raise patch.PatchError('unknown patch content: %r' % line)
 
 class PatchNode(object):
-    "Abstract Class for Patch Graph Nodes (i.e. PatchRoot, header, hunk, HunkLine)"
+    """Abstract Class for Patch Graph Nodes
+    (i.e. PatchRoot, header, hunk, HunkLine)
+    """
 
     def firstChild(self):
         raise NotImplementedError("method must be implemented by subclass")
@@ -171,9 +173,11 @@ class PatchNode(object):
             prevSibling = self.prevSibling()
             if prevSibling is not None:
                 prevSiblingLastChild = prevSibling.lastChild()
-                if (prevSiblingLastChild is not None) and not prevSibling.folded:
+                if ((prevSiblingLastChild is not None) and
+                    not prevSibling.folded):
                     prevSiblingLCLC = prevSiblingLastChild.lastChild()
-                    if (prevSiblingLCLC is not None) and not prevSiblingLastChild.folded:
+                    if ((prevSiblingLCLC is not None) and
+                        not prevSiblingLastChild.folded):
                         return prevSiblingLCLC
                     else:
                         return prevSiblingLastChild
@@ -259,9 +263,9 @@ class header(PatchNode):
 
     def allhunks(self):
         """
-        Return True if the file which the header represents was changed completely (i.e.
-        there is no possibility of applying a hunk of changes smaller than the size of the
-        entire file.)  Otherwise return False
+        Return True if the file which the header represents was changed
+        completely (i.e.  there is no possibility of applying a hunk of changes
+        smaller than the size of the entire file.)  Otherwise return False
 
         """
         for h in self.header:
@@ -446,8 +450,10 @@ class hunk(PatchNode):
         return self.changedLines
     def countchanges(self):
         """changedLines -> (n+,n-)"""
-        add = len([l for l in self.changedLines if l.applied and l.prettyStr()[0] == '+'])
-        rem = len([l for l in self.changedLines if l.applied and l.prettyStr()[0] == '-'])
+        add = len([l for l in self.changedLines if l.applied
+                   and l.prettyStr()[0] == '+'])
+        rem = len([l for l in self.changedLines if l.applied
+                   and l.prettyStr()[0] == '-'])
         return add, rem
 
     def getFromToLine(self):
@@ -645,7 +651,8 @@ def filterpatch(opts, chunks, chunk_selector):
 
     appliedHunkList = []
     for hdr in headers:
-        if hdr.applied and (hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0):
+        if (hdr.applied and
+            (hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0)):
             appliedHunkList.append(hdr)
             fixoffset = 0
             for hnk in hdr.hunks:
