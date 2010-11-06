@@ -458,9 +458,9 @@ class hunk(PatchNode):
             delta -= 1
         fromlen = delta + self.removed
         tolen = delta + self.added
-        fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % \
-                 (self.fromline, fromlen, self.toline, tolen,
-                  self.proc and (' ' + self.proc))
+        fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % (
+            self.fromline, fromlen, self.toline, tolen,
+            self.proc and (' ' + self.proc))
         return fromToLine
 
     def write(self, fp):

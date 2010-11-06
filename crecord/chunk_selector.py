@@ -28,14 +28,14 @@ else:
     # I have no idea if wcurses works with crecord...
     import wcurses as curses
 
-#from curses import textpad 
+#from curses import textpad
 import textpad # customized textpad
 
 try:
     curses
 except NameError:
     raise util.Abort(_('the python curses/wcurses module is not available/installed'))
-    
+
 
 orig_stdout = sys.__stdout__ # used by gethw()
 
@@ -44,7 +44,7 @@ def gethw():
     Magically get the current height and width of the window (without initscr)
 
     This is a rip-off of a rip-off - taken from the bpython code.  It is
-    useful / necessary because otherwise curses.initscr() must be called, 
+    useful / necessary because otherwise curses.initscr() must be called,
     which can leave the terminal in a nasty state after exiting.
 
     """
@@ -122,7 +122,7 @@ class CursesChunkSelector(object):
         the first HunkLine of a hunk is currently selected, then select the
         hunk itself.
 
-        If the currently selected item is already at the top of the screen, 
+        If the currently selected item is already at the top of the screen,
         scroll the screen down to show the new-selected item.
 
         """
@@ -143,7 +143,7 @@ class CursesChunkSelector(object):
         selected item.  Otherwise, select (if possible) the parent-item of the
         currently selected item.
 
-        If the currently selected item is already at the top of the screen, 
+        If the currently selected item is already at the top of the screen,
         scroll the screen down to show the new-selected item.
 
         """
@@ -167,7 +167,7 @@ class CursesChunkSelector(object):
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
 
-        If the currently selected item is already at the bottom of the screen, 
+        If the currently selected item is already at the bottom of the screen,
         scroll the screen up to show the new-selected item.
 
         """
@@ -231,16 +231,16 @@ class CursesChunkSelector(object):
 
         """
         currentItem = self.currentSelectedItem
-        
+
         # try to fold the item
         if not isinstance(currentItem, HunkLine):
             if not currentItem.folded:
                 self.toggleFolded(item=currentItem)
                 return
-        
+
         # if it can't be folded, try to select the parent item
         nextItem = currentItem.parentItem()
-        
+
         if nextItem is None:
             # if no item on parent-level, then no change...
             nextItem = currentItem
@@ -256,7 +256,6 @@ class CursesChunkSelector(object):
         #selNumLines = selEnd - selStart
         padStart = self.firstLineOfPadToPrint
         padEnd = padStart + self.yScreenSize - self.numStatusLines - 1
-        screenMiddleLine = self.yScreenSize / 2
         # 'buffered' pad start/end values which scroll with a certain
         # top/bottom context margin
         padStartBuffered = padStart + 3
@@ -317,7 +316,7 @@ class CursesChunkSelector(object):
                 hunkLine.applied = item.applied
 
             siblingAppliedStatus = [hnk.applied for hnk in item.header.hunks]
-            allSiblingsApplied = not (False in siblingAppliedStatus) 
+            allSiblingsApplied = not (False in siblingAppliedStatus)
             noSiblingsApplied = not (True in siblingAppliedStatus)
 
             siblingsPartialStatus = [hnk.partial for hnk in item.header.hunks]
@@ -332,12 +331,12 @@ class CursesChunkSelector(object):
                     item.header.partial = False
             else: # some/all parent siblings are applied
                 item.header.applied = True
-                item.header.partial = (someSiblingsPartial or \
+                item.header.partial = (someSiblingsPartial or
                                         not allSiblingsApplied)
 
         elif isinstance(item, HunkLine):
             siblingAppliedStatus = [hnkln.applied for hnkln in item.hunk.changedLines]
-            allSiblingsApplied = not (False in siblingAppliedStatus) 
+            allSiblingsApplied = not (False in siblingAppliedStatus)
             noSiblingsApplied = not (True in siblingAppliedStatus)
 
             # if no 'sibling' lines are applied
@@ -366,7 +365,7 @@ class CursesChunkSelector(object):
             # set the applied and partial status of the header if needed
             else: # some/all parent siblings are applied
                 item.hunk.header.applied = True
-                item.hunk.header.partial = (someParentSiblingsPartial or \
+                item.hunk.header.partial = (someParentSiblingsPartial or
                                             not allParentSiblingsApplied)
 
     def toggleAll(self):
@@ -391,7 +390,7 @@ class CursesChunkSelector(object):
                 self.currentSelectedItem = item = item.parentItem()
             elif item.neverUnfolded:
                 item.neverUnfolded = False
-            
+
             # also fold any foldable children of the parent/current item
             if isinstance(item, header): # the original OR 'new' item
                 for child in item.allChildren():
@@ -433,13 +432,13 @@ class CursesChunkSelector(object):
         MAGENTA, RED, WHITE, YELLOW].  If pairName is provided, a color
         pair will be looked up in the self.colorPairNames dictionary.
 
-        attrList is a list containing text attributes in the form of 
+        attrList is a list containing text attributes in the form of
         curses.A_XXXX, where XXXX can be: [BOLD, DIM, NORMAL, STANDOUT,
         UNDERLINE].
-        
+
         If align == True, whitespace is added to the printed string such that
         the string stretches to the right border of the window.
-        
+
         If showWhtSpc == True, trailing whitespace of a string is highlighted.
 
         """
@@ -483,7 +482,7 @@ class CursesChunkSelector(object):
             text = text.rstrip(' \n') # tabs have already been expanded
             strippedLen = len(text)
             numTrailingSpaces = origLen - strippedLen
-        
+
         if toWin:
             window.addstr(text, colorPair)
         t += text
@@ -494,7 +493,7 @@ class CursesChunkSelector(object):
                     for i in range(numTrailingSpaces):
                         window.addch(curses.ACS_CKBOARD, wsColorPair)
                 t += " " * numTrailingSpaces
-        
+
         if align:
             if toWin:
                 extraWhiteSpace = self.alignString("", window)
@@ -503,9 +502,9 @@ class CursesChunkSelector(object):
                 # need to use t, since the x position hasn't incremented
                 extraWhiteSpace = self.alignString(t, window)
             t += extraWhiteSpace
-        
+
         # is reset to 0 at the beginning of printItem()
-        
+
         linesPrinted = (xStart + len(t)) / self.xScreenSize
         self.linesPrintedToPadSoFar += linesPrinted
         return t
@@ -514,8 +513,6 @@ class CursesChunkSelector(object):
         self.statuswin.erase()
         self.chunkpad.erase()
 
-        width = self.xScreenSize
-        alignString = self.alignString
         printString = self.printString
 
         # print out the status lines at the top
@@ -557,7 +554,7 @@ class CursesChunkSelector(object):
                 if isinstance(item, header):
                     # one of "M", "A", or "D" (modified, added, deleted)
                     fileStatus = item.changetype
-                 
+
                     checkBox += fileStatus + " "
             else:
                 checkBox += "  "
@@ -737,8 +734,8 @@ class CursesChunkSelector(object):
             if recurseChildren:
                 for hnk in item.hunks:
                     self.__printItem(hnk, ignoreFolding, recurseChildren, toWin)
-        elif isinstance(item, hunk) and \
-        ((not item.header.folded) or ignoreFolding):
+        elif (isinstance(item, hunk) and
+              ((not item.header.folded) or ignoreFolding)):
             # print the hunk data which comes before the changed-lines
             outStr += self.printHunkLinesBefore(item, selected, toWin=toWin, ignoreFolding=ignoreFolding)
             if recurseChildren:
@@ -825,7 +822,7 @@ class CursesChunkSelector(object):
 
     def initColorPair(self, *args, **kwargs):
         "Same as getColorPair."
-        self.getColorPair(*args, **kwargs)    
+        self.getColorPair(*args, **kwargs)
 
     def helpWindow(self):
         "Print a help window to the screen.  Exit after any keypress."
@@ -877,8 +874,8 @@ The following are valid keystrokes:
             else:
                 return key
         statusline = curses.newwin(2,0,0,0)
-        statusLineText = \
-        " Begin/resume editing commit message. CTRL-C/-X returns to patch view."
+        statusLineText = (" Begin/resume editing commit message."
+                          " CTRL-C/-X returns to patch view.")
         self.printString(statusline, statusLineText, pairName="legend")
         statusline.refresh()
         helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
@@ -890,7 +887,7 @@ The following are valid keystrokes:
     def confirmCommit(self, review=False):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
         if review:
-            confirmText = \
+            confirmText = (
 """If you answer yes to the following, the your currently chosen patch chunks
 will be loaded into an editor.  You may modify the patch from the editor, and
 save the changes if you wish to change the patch.  Otherwise, you can just
@@ -899,7 +896,7 @@ close the editor without saving to accept the current patch as-is.
 NOTE: don't add/remove lines unless you also modify the range information.
       Failing to follow this rule will result in the commit aborting.
 
-Are you sure you want to review/edit and commit the selected changes [yN]? """
+Are you sure you want to review/edit and commit the selected changes [yN]? """)
         else:
             confirmText = "Are you sure you want to commit the selected changes [yN]? "
 
@@ -956,9 +953,9 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """
 
         # initialize selecteItemEndLine (initial start-line is 0)
         self.selectedItemEndLine = self.getNumLinesDisplayed(self.currentSelectedItem, recurseChildren=False)
-        
+
         # option which enables/disables patch-review (in editor) step
-        opts['crecord_reviewpatch'] = False 
+        opts['crecord_reviewpatch'] = False
 
         try:
             self.commentText = opts['message']

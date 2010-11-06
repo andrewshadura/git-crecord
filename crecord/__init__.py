@@ -9,7 +9,7 @@
 
 '''text-gui based change selection during commit or qrefresh'''
 from mercurial.i18n import _
-from mercurial import commands, extensions
+from mercurial import commands, extensions, util
 
 from crecord_core import dorecord
 
@@ -77,23 +77,19 @@ def extsetup():
     except KeyError:
         return
 
-    try:
-        qcmdtable = {
-        "qcrecord":
-            (qcrecord,
-
-             # add qnew options, except '--force'
-             [opt for opt in mq.cmdtable['^qnew'][1] if opt[1] != 'force'],
-
-             _('hg qcrecord [OPTION]... PATCH [FILE]...')),
-        }
-    except KeyError:
+    qnew = '^qnew'
+    if not qnew in mq.cmdtable:
         # backwards compatible with pre 301633755dec
-        qcmdtable = {
-        "qcrecord":
-            (qcrecord,
-             [opt for opt in mq.cmdtable['qnew'][1] if opt[1] != 'force'],
-             _('hg qcrecord [OPTION]... PATCH [FILE]...')),
-        }
+        qnew = 'qnew'
+
+    qcmdtable = {
+    "qcrecord":
+        (qcrecord,
+
+         # add qnew options, except '--force'
+         [opt for opt in mq.cmdtable[qnew][1] if opt[1] != 'force'],
+
+         _('hg qcrecord [OPTION]... PATCH [FILE]...')),
+    }
 
     cmdtable.update(qcmdtable)
