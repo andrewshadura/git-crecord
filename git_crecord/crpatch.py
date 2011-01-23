@@ -230,10 +230,7 @@ class uiheader(patchnode):
         Otherwise return False.
 
         """
-        for h in self.header:
-            if h.startswith('GIT binary patch'):
-                return True
-        return False
+        return any(h.startswith('GIT binary patch') for h in self.header)
 
     def pretty(self, fp):
         for h in self.header:
@@ -267,10 +264,7 @@ class uiheader(patchnode):
         smaller than the size of the entire file.)  Otherwise return False
 
         """
-        for h in self.header:
-            if self.allhunks_re.match(h):
-                return True
-        return False
+        return any(self.allhunks_re.match(h) for h in self.header)
 
     def files(self):
         fromfile, tofile = self.diff_re.match(self.header[0]).groups()
@@ -288,9 +282,7 @@ class uiheader(patchnode):
         return '<header %s>' % (' '.join(map(repr, self.files())))
 
     def special(self):
-        for h in self.header:
-            if self.special_re.match(h):
-                return True
+        return any(self.special_re.match(h) for h in self.header)
 
     @property
     def changetype(self):
