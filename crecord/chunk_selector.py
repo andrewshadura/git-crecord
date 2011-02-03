@@ -251,6 +251,29 @@ class CursesChunkSelector(object):
 
         self.currentSelectedItem = nextItem
 
+    def leftArrowShiftEvent(self):
+        """
+        Select the header of the current item (or fold current item if the
+        current item is already a header).
+
+        """
+        currentItem = self.currentSelectedItem
+
+        if isinstance(currentItem, header):
+            if not currentItem.folded:
+                self.toggleFolded(item=currentItem)
+                return
+
+        # select the parent item recursively until we're at a header
+        while True:
+            nextItem = currentItem.parentItem()
+            if nextItem is None:
+                break
+            else:
+                currentItem = nextItem
+
+        self.currentSelectedItem = currentItem
+
     def updateScroll(self):
         "Scroll the screen to fully show the currently-selected"
         selStart = self.selectedItemStartLine
@@ -871,6 +894,7 @@ The following are valid keystrokes:
     Up/Down-arrow [k/j] : go to previous/next unfolded item
         PgUp/PgDn [K/J] : go to previous/next item of same type
  Right/Left-arrow [l/h] : go to child item / parent item
+ Shift-Left-arrow   [H] : go to parent header / fold selected header
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
@@ -1017,6 +1041,8 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 self.rightArrowEvent()
             elif keyPressed in ["h", "KEY_LEFT"]:
                 self.leftArrowEvent()
+            elif keyPressed in ["H", "KEY_SLEFT"]:
+                self.leftArrowShiftEvent()
             elif keyPressed in ["q"]:
                 raise util.Abort(_('user quit'))
             elif keyPressed in ["c"]:
