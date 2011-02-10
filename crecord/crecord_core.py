@@ -56,7 +56,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         # 1. filter patch, so we have intending-to apply subset of it
         chunks = crpatch.filterpatch(opts,
                                      crpatch.parsepatch(changes, fp),
-                                     chunk_selector.chunkselector)
+                                     chunk_selector.chunkselector, ui)
         del fp
 
         contenders = set()

@@ -18,6 +18,7 @@ import fcntl
 import struct
 import termios
 import signal
+import textwrap
 
 from crpatch import Patch, header, hunk, HunkLine
 
@@ -27,9 +28,6 @@ if os.name == 'posix':
 else:
     # I have no idea if wcurses works with crecord...
     import wcurses as curses
-
-#from curses import textpad
-import textpad # customized textpad
 
 try:
     curses
@@ -54,20 +52,22 @@ def gethw():
     return h, w
 
 
-def chunkselector(opts, headerList):
+def chunkselector(opts, headerList, ui):
     """
     Curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
 
     """
 
-    chunkSelector = CursesChunkSelector(headerList)
+    chunkSelector = CursesChunkSelector(headerList, ui)
     curses.wrapper(chunkSelector.main, opts)
 
 class CursesChunkSelector(object):
-    def __init__(self, headerList):
+    def __init__(self, headerList, ui):
         # put the headers into a patch object
         self.headerList = Patch(headerList)
+        
+        self.ui = ui
 
         # list of all chunks
         self.chunkList = []
@@ -920,27 +920,22 @@ The following are valid keystrokes:
 
     def commitMessageWindow(self):
         "Create a temporary commit message editing window on the screen."
-        # In Python versions < 2.6, there is no insert mode (only overwrite) :(
-        def keyFilter(key):
-            "provide keymappings to emacs-style keys"
-            if key in (7,):
-                # diable keys we're re-mapping
-                return ""
-            elif key in (24, 3): # CTRL-X,  3 = CTRL-C
-                return 7 # CTRL-G (i.e. exit comment window)
-            else:
-                return key
-        statusline = curses.newwin(2,0,0,0)
-        statusLineText = (" Begin/resume editing commit message."
-                          " CTRL-C/-X returns to patch view.")
-        self.printString(statusline, statusLineText, pairName="legend")
-        statusline.refresh()
-        helpwin = curses.newwin(self.yScreenSize-1,0,1,0)
-        t = textpad.Textbox(helpwin)
+        if self.commentText == "":
+            self.commentText = textwrap.dedent("""
+            HG: Enter/resume commit message.  Lines beginning with 'HG:' are removed.
+            HG: You can save this message, and edit it again later before committing.
+            HG: After exiting the editor, you will return to the crecord patch view.
+            HG: --
+            HG: user: %s""" % self.ui.username())
+            
         curses.raw()
-        self.commentText = t.edit(keyFilter, self.commentText).rstrip(" \n")
+        curses.def_prog_mode()
+        curses.endwin()
+        self.commentText = self.ui.edit(self.commentText, self.ui.username())
         curses.cbreak()
-
+        self.stdscr.refresh()
+        self.stdscr.keypad(1) # allow arrow-keys to continue to function
+        
     def confirmCommit(self, review=False):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
         if review:
