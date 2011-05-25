@@ -122,14 +122,20 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     ui.debug(fp.getvalue())
                     pfiles = {}
                     try:
-                        patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
+                        from mercurial import scmutil
+                        patch.internalpatch(ui, repo, fp, strip=1, files=pfiles,
                                             eolmode=None)
-                    except TypeError:  # backwards compatilibity with hg 1.1
-                        patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
-                    try:
-                        cmdutil.updatedir(ui, repo, pfiles)
-                    except AttributeError:
-                        patch.updatedir(ui, repo, pfiles)
+                        scmutil.updatedir(ui, repo, pfiles)
+                    except ImportError:
+                        try:
+                            patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
+                                                eolmode=None)
+                        except TypeError:  # backwards compatilibity with hg 1.1
+                            patch.internalpatch(fp, ui, 1, repo.root, files=pfiles)
+                        try:
+                            cmdutil.updatedir(ui, repo, pfiles)
+                        except AttributeError:
+                            patch.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
                     s = str(err)
                     if s:
