@@ -49,6 +49,31 @@ def qcrecord(ui, repo, patch, *pats, **opts):
     dorecord(ui, repo, committomq, *pats, **opts)
 
 
+def qcrefresh(ui, repo, *pats, **opts):
+    '''interactively update the current patch
+
+    See :hg:`help qrefresh` & :hg:`help crecord` for more information and
+    usage.
+    '''
+
+    try:
+        mq = extensions.find('mq')
+    except KeyError:
+        raise util.Abort(_("'mq' extension not loaded"))
+
+    def refreshmq(ui, repo, *pats, **opts):
+        mq.refresh(ui, repo, *pats, **opts)
+
+    # If the record operation (or subsequent refresh), the top applied patch
+    # will be emptied and the working directory will contain all of its
+    # changes.
+    import pdb
+    pdb.set_trace()
+    clearopts = { 'exclude': '*', 'message': '' }
+    mq.refresh(ui, repo, **clearopts)
+    dorecord(ui, repo, refreshmq, *pats, **opts)
+
+
 cmdtable = {
     "crecord":
         (crecord,
@@ -63,10 +88,10 @@ cmdtable = {
 def extsetup():
     try:
         keyword = extensions.find('keyword')
-        keyword.restricted += ' crecord qcrecord'
+        keyword.restricted += ' crecord qcrecord qcrefresh'
         try:
             keyword.recordextensions += ' crecord'
-            keyword.recordcommands += ' crecord qcrecord'
+            keyword.recordcommands += ' crecord qcrecord qcrefresh'
         except AttributeError:
             pass
     except KeyError:
@@ -82,12 +107,25 @@ def extsetup():
         # backwards compatible with pre 301633755dec
         qnew = 'qnew'
 
+    qrefresh = '^qrefresh'
+    if not qrefresh in mq.cmdtable:
+        # backwards compatible?
+        qrefresh = 'qrefresh'
+
     qcmdtable = {
     "qcrecord":
         (qcrecord,
 
          # add qnew options, except '--force'
          [opt for opt in mq.cmdtable[qnew][1] if opt[1] != 'force'],
+
+         _('hg qcrecord [OPTION]... PATCH [FILE]...')),
+
+    "qcrefresh":
+        (qcrefresh,
+
+         # sample options as qrefresh
+         mq.cmdtable[qrefresh][1],
 
          _('hg qcrecord [OPTION]... PATCH [FILE]...')),
     }
