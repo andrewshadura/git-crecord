@@ -67,8 +67,6 @@ def qcrefresh(ui, repo, *pats, **opts):
     # If the record operation (or subsequent refresh), the top applied patch
     # will be emptied and the working directory will contain all of its
     # changes.
-    import pdb
-    pdb.set_trace()
     clearopts = { 'exclude': '*', 'message': '' }
     mq.refresh(ui, repo, **clearopts)
     dorecord(ui, repo, refreshmq, *pats, **opts)
