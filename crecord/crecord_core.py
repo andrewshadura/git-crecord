@@ -120,13 +120,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    pfiles = {}
-                    try:
-                        from mercurial import scmutil
-                        patch.internalpatch(ui, repo, fp, strip=1, files=pfiles,
-                                            eolmode=None)
-                        scmutil.updatedir(ui, repo, pfiles)
-                    except ImportError: # pre 3438417a6657
+                    if hasattr(patch, 'workingbackend'): # detect 1.9
+                        patch.internalpatch(ui, repo, fp, strip=1, eolmode=None)
+                    else:
+                        pfiles = {}
                         try:
                             patch.internalpatch(ui, repo, fp, 1, eolmode=None)
                         except (TypeError, AttributeError): # pre 17cea10c343e
