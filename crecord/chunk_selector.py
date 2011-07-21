@@ -922,6 +922,7 @@ The following are valid keystrokes:
         "Create a temporary commit message editing window on the screen."
         if self.commentText == "":
             self.commentText = textwrap.dedent("""
+            
             HG: Enter/resume commit message.  Lines beginning with 'HG:' are removed.
             HG: You can save this message, and edit it again later before committing.
             HG: After exiting the editor, you will return to the crecord patch view.
@@ -1061,4 +1062,10 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 self.commitMessageWindow()
 
         if self.commentText != "":
-            opts['message'] = self.commentText
+            # strip out all lines beginning with 'HG:'
+            self.commentText = re.sub("(?m)^HG:.*(\n|$)", "", self.commentText)
+            # remove lines with whitespace (for test below)
+            whitespaceRemoved = re.sub("(?m)^\s.*(\n|$)", "", self.commentText)
+            # if there's anything left...
+            if whitespaceRemoved != "":
+                opts['message'] = self.commentText
