@@ -56,6 +56,10 @@ def qcrefresh(ui, repo, *pats, **opts):
     usage.
     '''
 
+    # Note: if the record operation (or subsequent refresh) fails partway
+    # through, the top applied patch will be emptied and the working directory
+    # will contain all of its changes.
+
     try:
         mq = extensions.find('mq')
     except KeyError:
@@ -64,10 +68,10 @@ def qcrefresh(ui, repo, *pats, **opts):
     def refreshmq(ui, repo, *pats, **opts):
         mq.refresh(ui, repo, *pats, **opts)
 
-    # If the record operation (or subsequent refresh), the top applied patch
-    # will be emptied and the working directory will contain all of its
-    # changes.
-    clearopts = { 'exclude': '*', 'message': '' }
+    # Cannot use the simple pattern '*' because it will resolve relative to the
+    # current working directory
+    clearopts = { 'exclude': ["re:."], 'message': "" }
+
     mq.refresh(ui, repo, **clearopts)
     dorecord(ui, repo, refreshmq, *pats, **opts)
 
