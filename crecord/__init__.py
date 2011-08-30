@@ -50,11 +50,23 @@ def qcrecord(ui, repo, patch, *pats, **opts):
 
 
 def qcrefresh(ui, repo, *pats, **opts):
-    '''interactively update the current patch
+    """interactively update the current patch
+
+    If any file patterns are provided, the refreshed patch will
+    contain only the modifications that match those patterns; the
+    remaining modifications will remain in the working directory.
+
+    If -s/--short is specified, files currently included in the patch
+    will be refreshed just like matched files and remain in the patch.
+
+    hg add/remove/copy/rename work as usual, though you might want to
+    use git-style patches (-g/--git or [diff] git=1) to track copies
+    and renames. See the diffs help topic for more information on the
+    git diff format.
 
     See :hg:`help qrefresh` & :hg:`help crecord` for more information and
     usage.
-    '''
+    """
 
     # Note: if the record operation (or subsequent refresh) fails partway
     # through, the top applied patch will be emptied and the working directory
@@ -126,10 +138,10 @@ def extsetup():
     "qcrefresh":
         (qcrefresh,
 
-         # sample options as qrefresh
+         # same options as qrefresh
          mq.cmdtable[qrefresh][1],
 
-         _('hg qcrecord [OPTION]... PATCH [FILE]...')),
+         _('hg qcrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     }
 
     cmdtable.update(qcmdtable)
