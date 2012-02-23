@@ -459,13 +459,27 @@ class hunk(PatchNode):
     def getFromToLine(self):
         # calculate the number of removed lines converted to context lines
         removedConvertedToContext = self.originalremoved - self.removed
-        delta = len(self.before) + len(self.after) + removedConvertedToContext
+
+        contextLen = (len(self.before) + len(self.after) +
+                      removedConvertedToContext)
         if self.after and self.after[-1] == '\\ No newline at end of file\n':
-            delta -= 1
-        fromlen = delta + self.removed
-        tolen = delta + self.added
+            contextLen -= 1
+        fromlen = contextLen + self.removed
+        tolen = contextLen + self.added
+
+        # Diffutils manual, section "2.2.2.2 Detailed Description of Unified
+        # Format": "An empty hunk is considered to end at the line that
+        # precedes the hunk."
+        #
+        # So, if either of hunks is empty, decrease its line start. --immerrr
+        fromline,toline = self.fromline, self.toline
+        if fromlen == 0:
+            fromline -= 1
+        if tolen == 0:
+            toline -= 1
+
         fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % (
-            self.fromline, fromlen, self.toline, tolen,
+            fromline, fromlen, toline, tolen,
             self.proc and (' ' + self.proc))
         return fromToLine
 
