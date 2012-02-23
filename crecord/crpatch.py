@@ -541,8 +541,8 @@ def parsepatch(changes, fp):
                      self.before, self.changedlines, self.context)
             self.header.hunks.append(h)
             self.stream.append(h)
-            self.fromline += len(self.before) + h.removed
-            self.toline += len(self.before) + h.added
+            self.fromline += len(self.before) + h.removed + len(self.context)
+            self.toline += len(self.before) + h.added + len(self.context)
             self.before = []
             self.changedlines = []
             self.context = []
