@@ -85,6 +85,13 @@ def qcrefresh(ui, repo, *pats, **opts):
     clearopts = { 'exclude': ["re:."], 'message': "" }
 
     mq.refresh(ui, repo, **clearopts)
+
+    # if message wasn't specified in commandline, initialize from existing patch header
+    if not opts.get('message',''):
+        patchname = repo.mq.applied[-1].name
+        patchmsg_lines = mq.patchheader(repo.mq.join(patchname), repo.mq.plainmode).message
+        opts['message'] = '\n'.join(patchmsg_lines)
+
     dorecord(ui, repo, refreshmq, *pats, **opts)
 
 
