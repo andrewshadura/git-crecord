@@ -1006,17 +1006,17 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         opts['crecord_reviewpatch'] = False
 
         try:
-            self.commentText = opts['message'] + \
-                textwrap.dedent("""
-                
-                HG: Enter/resume commit message.  Lines beginning with 'HG:' are removed.
-                HG: You can save this message, and edit it again later before committing.
-                HG: After exiting the editor, you will return to the crecord patch view.
-                HG: --
-                HG: user: %s""" % self.ui.username())
-
+            self.commentText = opts['message']
         except KeyError:
             pass
+
+        self.commentText += textwrap.dedent("""
+        
+        HG: Enter/resume commit message.  Lines beginning with 'HG:' are removed.
+        HG: You can save this message, and edit it again later before committing.
+        HG: After exiting the editor, you will return to the crecord patch view.
+        HG: --
+        HG: user: %s""" % self.ui.username())
 
         while True:
             self.updateScreen()
