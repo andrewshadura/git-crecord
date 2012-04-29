@@ -685,18 +685,16 @@ class CursesChunkSelector(object):
         if hunk.folded and not ignoreFolding:
             return outStr
 
-        indentNumChars = self.hunkLineIndentNumChars-1
         # a bit superfluous, but to avoid hard-coding indent amount
         checkBox = self.getStatusPrefixString(hunk)
         for line in hunk.after:
-            lineStr = " "*(indentNumChars + len(checkBox)) + line
+            lineStr = " "*(self.hunkLineIndentNumChars + len(checkBox)) + line
             outStr += self.printString(self.chunkpad, lineStr, toWin=toWin)
 
         return outStr
 
     def printHunkChangedLine(self, hunkLine, selected=False, toWin=True):
         outStr = ""
-        indentNumChars = self.hunkLineIndentNumChars
         checkBox = self.getStatusPrefixString(hunkLine)
 
         lineStr = hunkLine.prettyStr().strip("\n")
@@ -711,7 +709,7 @@ class CursesChunkSelector(object):
         elif lineStr.startswith("\\"):
             colorPair = self.getColorPair(name="normal")
 
-        linePrefix = " "*indentNumChars + checkBox
+        linePrefix = " "*self.hunkLineIndentNumChars + checkBox
         outStr += self.printString(self.chunkpad, linePrefix, toWin=toWin,
                                    align=False) # add uncolored checkbox/indent
         outStr += self.printString(self.chunkpad, lineStr, pair=colorPair,
