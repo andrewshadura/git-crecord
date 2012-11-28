@@ -989,7 +989,7 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         if ver < 2.19:
             msg = ("The amend option is unavailable with hg versions < 2.2\n\n"
                    "Press any key to continue.")
-        if opts.get('amend') is None:
+        elif opts.get('amend') is None:
             opts['amend'] = True
             msg = ("Amend option is turned on -- commiting the currently "
                    "selected changes will not create a new changeset, but "
