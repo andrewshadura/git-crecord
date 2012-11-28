@@ -896,6 +896,7 @@ The following are valid keystrokes:
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
+                      a : toggle amend mode (hg rev >= 2.2)
                       c : commit selected changes
                       r : review/edit and commit selected changes
                       q : quit without committing (no changes will be made)
@@ -926,7 +927,26 @@ The following are valid keystrokes:
         curses.cbreak()
         self.stdscr.refresh()
         self.stdscr.keypad(1) # allow arrow-keys to continue to function
-        
+
+    def confirmationWindow(self, windowText):
+        "Display an informational window, then wait for and return a keypress."
+
+        confirmWin = curses.newwin(self.yScreenSize, 0, 0, 0)
+        try:
+            lines = windowText.split("\n")
+            for line in lines:
+                self.printString(confirmWin, line, pairName="selected")
+        except curses.error:
+            pass
+        self.stdscr.refresh()
+        confirmWin.refresh()
+        try:
+            response = chr(self.stdscr.getch())
+        except ValueError:
+            response = None
+
+        return response
+
     def confirmCommit(self, review=False):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
         if review:
@@ -944,23 +964,44 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
             confirmText = (
                 "Are you sure you want to commit the selected changes [yN]? ")
 
-        confirmWin = curses.newwin(self.yScreenSize, 0, 0, 0)
-        try:
-            lines = confirmText.split("\n")
-            for line in lines:
-                self.printString(confirmWin, line, pairName="selected")
-        except curses.error:
-            pass
-        self.stdscr.refresh()
-        confirmWin.refresh()
-        try:
-            response = chr(self.stdscr.getch())
-        except ValueError:
+        response = self.confirmationWindow(confirmText)
+        if response is None:
             response = "n"
         if response.lower().startswith("y"):
             return True
         else:
             return False
+
+    def toggleAmend(self, opts):
+        """Toggle the amend flag.
+
+        When the amend flag is set, a commit will modify the most recently
+        committed changeset, instead of creating a new changeset.  Otherwise, a
+        new changeset will be created (the normal commit behavior).
+
+        """
+        try:
+            ver = float(util.version()[:3])
+        except:
+            # not sure if needed: for earlier versions that may not have
+            # util.vesrion()...
+            ver = 1
+        if ver < 2.19:
+            msg = ("The amend option is unavailable with hg versions < 2.2\n\n"
+                   "Press any key to continue.")
+        if opts.get('amend') is None:
+            opts['amend'] = True
+            msg = ("Amend option is turned on -- commiting the currently "
+                   "selected changes will not create a new changeset, but "
+                   "instead update the most recently committed changeset.\n\n"
+                   "Press any key to continue.")
+        elif opts.get('amend') is True:
+            opts['amend'] = None
+            msg = ("Amend option is turned off -- commiting the currently "
+                   "selected changes will create a new changeset.\n\n"
+                   "Press any key to continue.")
+
+        self.confirmationWindow(msg)
 
     def main(self, stdscr, opts):
         """
@@ -1039,6 +1080,8 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 self.leftArrowShiftEvent()
             elif keyPressed in ["q"]:
                 raise util.Abort(_('user quit'))
+            elif keyPressed in ['a']:
+                self.toggleAmend(opts)
             elif keyPressed in ["c"]:
                 if self.confirmCommit():
                     break
