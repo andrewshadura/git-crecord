@@ -1049,6 +1049,10 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         except KeyError:
             pass
 
+        if opts['user'] != '':
+            # make it accessible by self.ui.username()
+            self.ui.setconfig("ui", "username", opts['user'])
+
         self.commentText += textwrap.dedent("""
         
         HG: Enter/resume commit message.  Lines beginning with 'HG:' are removed.
