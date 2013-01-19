@@ -472,11 +472,13 @@ class hunk(PatchNode):
         # precedes the hunk."
         #
         # So, if either of hunks is empty, decrease its line start. --immerrr
+        # But only do this if fromline > 0, to avoid having, e.g fromline=-1.
         fromline,toline = self.fromline, self.toline
-        if fromlen == 0:
-            fromline -= 1
-        if tolen == 0:
-            toline -= 1
+        if fromline != 0:
+            if fromlen == 0:
+                fromline -= 1
+            if tolen == 0:
+                toline -= 1
 
         fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % (
             fromline, fromlen, toline, tolen,
