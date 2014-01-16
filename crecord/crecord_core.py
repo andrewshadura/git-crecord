@@ -47,7 +47,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                '(use hg commit instead)'))
 
         changes = repo.status(match=match)[:3]
-        diffopts = mdiff.diffopts(git=True, nodates=True)
+        diffopts = opts.copy()
+        diffopts['nodates'] = True
+        diffopts['git'] = True
+        diffopts = patch.diffopts(ui, opts=diffopts)
         chunks = patch.diff(repo, changes=changes, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
