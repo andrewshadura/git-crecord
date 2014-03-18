@@ -46,7 +46,11 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             raise util.Abort(_('cannot partially commit a merge '
                                '(use hg commit instead)'))
 
+        # status gives back
+        #   modified, added, removed, deleted, unknown, ignored, clean
+        # we take only the first 3 of these
         changes = repo.status(match=match)[:3]
+        modified, added, removed = changes
         diffopts = opts.copy()
         diffopts['nodates'] = True
         diffopts['git'] = True
@@ -76,10 +80,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             ui.status(_('no changes to record\n'))
             return 0
 
-        modified = set(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
         backups = {}
+        newly_added_backups = {}
         backupdir = repo.join('record-backups')
         try:
             os.mkdir(backupdir)
@@ -89,18 +93,24 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         try:
             # backup continues
             for f in newfiles:
-                if f not in modified:
+                if f not in (modified + added):
                     continue
                 fd, tmpname = tempfile.mkstemp(prefix=f.replace('/', '_')+'.',
                                                dir=backupdir)
                 os.close(fd)
                 ui.debug('backup %r as %r\n' % (f, tmpname))
                 util.copyfile(repo.wjoin(f), tmpname)
-                backups[f] = tmpname
+                if f in modified:
+                    backups[f] = tmpname
+                elif f in added:
+                    newly_added_backups[f] = tmpname
 
             fp = cStringIO.StringIO()
+            all_backups = {}
+            all_backups.update(backups)
+            all_backups.update(newly_added_backups)
             for c in chunks:
-                if c.filename() in backups:
+                if c.filename() in all_backups:
                     c.write(fp)
             dopatch = fp.tell()
             fp.seek(0)
@@ -117,6 +127,9 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             if backups:
                 hg.revert(repo, repo.dirstate.parents()[0],
                           lambda key: key in backups)
+            # remove newly added files from 'clean' repo (so patch can apply)
+            for f in newly_added_backups:
+                os.unlink(f)
 
             # 3b. (apply)
             if dopatch:
@@ -169,6 +182,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             # 5. finally restore backed-up files
             try:
                 for realname, tmpname in backups.iteritems():
+                    ui.debug('restoring %r to %r\n' % (tmpname, realname))
+                    util.copyfile(tmpname, repo.wjoin(realname))
+                    os.unlink(tmpname)
+                for realname, tmpname in newly_added_backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
                     util.copyfile(tmpname, repo.wjoin(realname))
                     os.unlink(tmpname)
