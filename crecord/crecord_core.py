@@ -76,7 +76,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         changed = changes[0] + changes[1] + changes[2]
         newfiles = [f for f in changed if f in contenders]
 
-        if not newfiles and not opts.get('amend'):
+        if not newfiles:
             ui.status(_('no changes to record\n'))
             return 0
 
