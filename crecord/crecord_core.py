@@ -53,9 +53,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         modified, added, removed = changes
         try:
             # Mercurial >= 3.3 allow disabling format-changing diffopts
-            diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
+            diffopts = patch.difffeatureopts(ui, opts=opts, section='crecord',
+                                             whitespace=True)
         except AttributeError:
-            diffopts = patch.diffopts(ui, opts=opts)
+            diffopts = patch.diffopts(ui, opts=opts, section='crecord')
         diffopts.nodates = True
         diffopts.git = True
         chunks = patch.diff(repo, changes=changes, opts=diffopts)
