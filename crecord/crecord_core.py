@@ -133,7 +133,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                           lambda key: key in backups)
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
-                os.unlink(f)
+                os.unlink(repo.wjoin(f))
 
             # 3b. (apply)
             if dopatch:
