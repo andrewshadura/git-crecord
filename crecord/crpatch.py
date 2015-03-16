@@ -684,7 +684,7 @@ def parsepatch(fp):
         state = newstate
     return p.finished()
 
-def filterpatch(opts, chunks, chunk_selector, ui):
+def filterpatch(opts, chunks, chunkselector, ui):
     """Interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
@@ -696,7 +696,7 @@ def filterpatch(opts, chunks, chunk_selector, ui):
         return []
 
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
-    chunk_selector(opts, headers, ui)
+    chunkselector(opts, headers, ui)
 
     appliedHunkList = []
     for hdr in headers:
