@@ -316,17 +316,12 @@ class CursesChunkSelector(object):
         if isinstance(item, uiheader):
             item.partial = False
             if item.applied:
-                if not item.special():
-                    # apply all its hunks
-                    for hnk in item.hunks:
-                        hnk.applied = True
-                        # apply all their hunklines
-                        for hunkline in hnk.changedlines:
-                            hunkline.applied = True
-                else:
-                    # all children are off (but the header is on)
-                    if len(item.allchildren()) > 0:
-                        item.partial = True
+                # apply all its hunks
+                for hnk in item.hunks:
+                    hnk.applied = True
+                    # apply all their hunklines
+                    for hunkline in hnk.changedlines:
+                        hunkline.applied = True
             else:
                 # un-apply all its hunks
                 for hnk in item.hunks:
