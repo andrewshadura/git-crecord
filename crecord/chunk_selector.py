@@ -885,7 +885,8 @@ class CursesChunkSelector(object):
         helptext = """            [press any key to return to the patch-display]
 
 crecord allows you to interactively choose among the changes you have made,
-and commit only those changes you select.  After committing the selected
+and confirm only those changes you select for further processing by the command
+you are running (commit/stage/unstage), after confirming the selected
 changes, the unselected changes are still present in your working copy, so you
 can use crecord multiple times to split large changes into smaller changesets.
 The following are valid keystrokes:
@@ -954,7 +955,8 @@ The following are valid keystrokes:
         return response
 
     def confirmcommit(self, review=False, stage=False):
-        "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
+        """Ask for 'Y' to be pressed to confirm selected. Return True if
+        confirmed."""
         if review:
             confirmtext = (
 """If you answer yes to the following, the your currently chosen patch chunks
@@ -965,7 +967,8 @@ close the editor without saving to accept the current patch as-is.
 NOTE: don't add/remove lines unless you also modify the range information.
       Failing to follow this rule will result in the commit aborting.
 
-Are you sure you want to review/edit and commit the selected changes [yN]? """)
+Are you sure you want to review/edit and confirm the selected changes [yN]?
+""")
         elif stage:
             confirmtext = (
                 "Are you sure you want to stage the selected changes [yN]? ")
