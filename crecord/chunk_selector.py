@@ -1068,6 +1068,8 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             self.togglefolded(foldParent=True)
         elif keypressed in ["?"]:
             self.helpwindow()
+            self.stdscr.clear()
+            self.stdscr.refresh()
         elif keypressed in ["m"]:
             self.commitmessagewindow()
         return False
