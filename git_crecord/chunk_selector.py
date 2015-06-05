@@ -65,6 +65,7 @@ class CursesChunkSelector(object):
 
         self.ui = ui
 
+        self.errorstr = None
         # list of all chunks
         self.chunklist = []
         for h in headerlist:
@@ -511,6 +512,12 @@ class CursesChunkSelector(object):
 
         # print out the status lines at the top
         try:
+            if self.errorstr is not None:
+                printstring(self.statuswin, self.errorstr, pairname='legend')
+                printstring(self.statuswin, 'Press any key to continue',
+                            pairname='legend')
+                self.statuswin.refresh()
+                return
             line1 = ("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
                      "(space/A) toggle hunk/all; (f)old/unfold")
             line2 = (" (c)ommit/(s)tage applied; (q)uit; (?) help;"
@@ -1104,6 +1111,9 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             self.updatescreen()
             try:
                 keypressed = self.statuswin.getkey()
+                if self.errorstr is not None:
+                    self.errorstr = None
+                    continue
             except curses.error:
                 keypressed = "FOOBAR"
             if self.handlekeypressed(keypressed, opts):
