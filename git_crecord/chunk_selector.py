@@ -56,7 +56,10 @@ def chunkselector(opts, headerlist, ui):
 
     """
     chunkselector = CursesChunkSelector(headerlist, ui)
+    f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main, opts)
+    # ncurses does not restore signal handler for SIGTSTP
+    signal.signal(signal.SIGTSTP, f)
 
 class CursesChunkSelector(object):
     def __init__(self, headerlist, ui):
