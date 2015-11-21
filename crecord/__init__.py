@@ -147,3 +147,6 @@ def extsetup():
     }
 
     cmdtable.update(qcmdtable)
+
+testedwith = '3.0.2 3.1.2 3.2.4 3.3.3 3.4.3 3.5.2 3.6'
+buglink = 'https://bitbucket.org/edgimar/crecord/issues'
