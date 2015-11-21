@@ -9,7 +9,7 @@
 
 '''text-gui based change selection during commit or qrefresh'''
 from mercurial.i18n import _
-from mercurial import cmdutil, hg, mdiff, patch
+from mercurial import cmdutil, mdiff, patch
 from mercurial import util
 import cStringIO
 import errno
@@ -129,8 +129,8 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
-                hg.revert(repo, repo.dirstate.parents()[0],
-                          lambda key: key in backups)
+                cmdutil.revert(ui, repo, repo['.'], repo.dirstate.parents(),
+                               *backups)
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
                 os.unlink(repo.wjoin(f))
