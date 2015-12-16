@@ -19,12 +19,21 @@ locale.setlocale(locale.LC_ALL, u'')
 
 from .crpatch import patch, uiheader, uihunk, uihunkline
 
-# os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
-if os.name == 'posix':
+try:
     import curses
-else:
+    import fcntl
+    import termios
+    curses.error
+    fcntl.ioctl
+    termios.TIOCGWINSZ
+except ImportError:
     # I have no idea if wcurses works with crecord...
-    import wcurses as curses
+    try:
+        import wcurses as curses
+        curses.error
+    except ImportError:
+        # wcurses is not shipped on Windows by default
+        pass
 
 try:
     curses
