@@ -13,6 +13,7 @@ import os
 import subprocess
 import shutil
 import sys
+from . import encoding
 
 closefds = os.name == 'posix'
 
@@ -99,3 +100,7 @@ def copyfile(src, dest, hardlink=False, copystat=False):
                 shutil.copymode(src, dest)
         except shutil.Error as inst:
             raise Abort(str(inst))
+
+def ellipsis(text, maxlength=400):
+    """Trim string to at most maxlength (default: 400) columns in display."""
+    return encoding.trim(text, maxlength, ellipsis='...')

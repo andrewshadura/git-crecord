@@ -516,13 +516,15 @@ class CursesChunkSelector(object):
 
         # print out the status lines at the top
         try:
+            line1 = ("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
+                     "(space/A) toggle hunk/all; (f)old/unfold")
+            line2 = (" (c)ommit/(s)tage applied; (q)uit; (?) help;"
+                     "toggle (a)mend mode | [x]=hunk applied **=folded")
             printstring(self.statuswin,
-                        "SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                        "(space/A) toggle hunk/all; (f)old/unfold",
+                        util.ellipsis(line1, self.xscreensize - 1),
                         pairname="legend")
             printstring(self.statuswin,
-                        " (c)ommit/(s)tage applied; (q)uit; (?) help;"
-                        "toggle (a)mend mode | [x]=hunk applied **=folded",
+                        util.ellipsis(line2, self.xscreensize - 1),
                         pairname="legend")
         except curses.error:
             pass
