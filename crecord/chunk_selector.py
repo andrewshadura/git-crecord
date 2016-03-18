@@ -1011,6 +1011,11 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         return True
 
     def handlekeypressed(self, keypressed, opts):
+        """
+        Perform actions based on pressed keys.
+
+        Return true to exit the main loop.
+        """
         if keypressed in ["k", "KEY_UP"]:
             self.uparrowevent()
         if keypressed in ["K", "KEY_PPAGE"]:
