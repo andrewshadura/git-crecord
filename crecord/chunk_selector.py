@@ -173,13 +173,10 @@ class CursesChunkSelector(object):
 
     def downarrowshiftevent(self):
         """
-        If the cursor is already at the bottom chunk, scroll the screen up and
-        move the cursor-position to the subsequent chunk.  Otherwise, only move
-        the cursor position down one chunk.
-
+        Select (if possible) the next item on the same level as the currently
+        selected item.  Otherwise, select (if possible) the next item on the
+        same level as the parent item of the currently selected item.
         """
-        # TODO: update docstring
-
         currentitem = self.currentselecteditem
         nextitem = currentitem.nextitem()
         # if there's no previous item on this level, try choosing the parent's
