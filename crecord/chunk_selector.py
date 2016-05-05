@@ -123,10 +123,6 @@ class CursesChunkSelector(object):
         the last HunkLine of the hunk prior to the selected hunk.  Or, if
         the first HunkLine of a hunk is currently selected, then select the
         hunk itself.
-
-        If the currently selected item is already at the top of the screen,
-        scroll the screen down to show the new-selected item.
-
         """
         currentitem = self.currentselecteditem
 
@@ -144,10 +140,6 @@ class CursesChunkSelector(object):
         Select (if possible) the previous item on the same level as the
         currently selected item.  Otherwise, select (if possible) the
         parent-item of the currently selected item.
-
-        If the currently selected item is already at the top of the screen,
-        scroll the screen down to show the new-selected item.
-
         """
         currentitem = self.currentselecteditem
         nextitem = currentitem.previtem()
@@ -168,10 +160,6 @@ class CursesChunkSelector(object):
         the first HunkLine of the selected hunk.  Or, if the last HunkLine of
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
-
-        If the currently selected item is already at the bottom of the screen,
-        scroll the screen up to show the new-selected item.
-
         """
         #self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
