@@ -118,17 +118,12 @@ class patchnode(object):
     def parentitem(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-    def nextitem(self, constrainlevel=True, skipfolded=True):
+    def nextitem(self, skipfolded=True):
         """
-        If constrainLevel == True, return the closest next item
-        of the same type where there are no items of different types between
-        the current item and this closest item.
+        Try to return the next item closest to this item, regardless of item's
+        type (header, hunk, or hunkline).
 
-        If constrainLevel == False, then try to return the next item
-        closest to this item, regardless of item's type (header, hunk, or
-        HunkLine).
-
-        If skipFolded == True, and the current item is folded, then the child
+        If skipfolded == True, and the current item is folded, then the child
         items that are hidden due to folding will be skipped when determining
         the next item.
 
@@ -138,9 +133,7 @@ class patchnode(object):
             itemfolded = self.folded
         except AttributeError:
             itemfolded = False
-        if constrainlevel:
-            return self.nextsibling()
-        elif skipfolded and itemfolded:
+        if skipfolded and itemfolded:
             nextitem = self.nextsibling()
             if nextitem is None:
                 try:
@@ -171,39 +164,31 @@ class patchnode(object):
             except AttributeError: # parent and/or grandparent was None
                 return None
 
-    def previtem(self, constrainlevel=True):
+    def previtem(self):
         """
-        If constrainLevel == True, return the closest previous item
-        of the same type where there are no items of different types between
-        the current item and this closest item.
-
-        If constrainLevel == False, then try to return the previous item
-        closest to this item, regardless of item's type (header, hunk, or
-        HunkLine).
+        Try to return the previous item closest to this item, regardless of
+        item's type (header, hunk, or hunkline).
 
         If it is not possible to get the previous item, return None.
         """
-        if constrainlevel:
-            return self.prevsibling()
-        else:
-            # try previous sibling's last child's last child,
-            # else try previous sibling's last child, else try previous sibling
-            prevsibling = self.prevsibling()
-            if prevsibling is not None:
-                prevsiblinglastchild = prevsibling.lastchild()
-                if ((prevsiblinglastchild is not None) and
-                    not prevsibling.folded):
-                    prevsiblinglclc = prevsiblinglastchild.lastchild()
-                    if ((prevsiblinglclc is not None) and
-                        not prevsiblinglastchild.folded):
-                        return prevsiblinglclc
-                    else:
-                        return prevsiblinglastchild
+        # try previous sibling's last child's last child,
+        # else try previous sibling's last child, else try previous sibling
+        prevsibling = self.prevsibling()
+        if prevsibling is not None:
+            prevsiblinglastchild = prevsibling.lastchild()
+            if ((prevsiblinglastchild is not None) and
+                not prevsibling.folded):
+                prevsiblinglclc = prevsiblinglastchild.lastchild()
+                if ((prevsiblinglclc is not None) and
+                    not prevsiblinglastchild.folded):
+                    return prevsiblinglclc
                 else:
-                    return prevsibling
+                    return prevsiblinglastchild
+            else:
+                return prevsibling
 
-            # try parent (or None)
-            return self.parentitem()
+        # try parent (or None)
+        return self.parentitem()
 
 class patch(patchnode, list): # TODO: rename PatchRoot
     """

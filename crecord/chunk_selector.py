@@ -126,7 +126,7 @@ class CursesChunkSelector(object):
         """
         currentitem = self.currentselecteditem
 
-        nextitem = currentitem.previtem(constrainlevel=False)
+        nextitem = currentitem.previtem()
 
         if nextitem is None:
             # if no parent item (i.e. currentitem is the first header), then
@@ -142,8 +142,8 @@ class CursesChunkSelector(object):
         parent-item of the currently selected item.
         """
         currentitem = self.currentselecteditem
-        nextitem = currentitem.previtem()
-        # if there's no previous item on this level, try choosing the parent
+        nextitem = currentitem.prevsibling()
+        # if there's no previous sibling, try choosing the parent
         if nextitem is None:
             nextitem = currentitem.parentitem()
         if nextitem is None:
@@ -164,7 +164,7 @@ class CursesChunkSelector(object):
         #self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
 
-        nextitem = currentitem.nextitem(constrainlevel=False)
+        nextitem = currentitem.nextitem()
         # if there's no next item, keep the selection as-is
         if nextitem is None:
             nextitem = currentitem
@@ -178,17 +178,16 @@ class CursesChunkSelector(object):
         same level as the parent item of the currently selected item.
         """
         currentitem = self.currentselecteditem
-        nextitem = currentitem.nextitem()
-        # if there's no previous item on this level, try choosing the parent's
-        # nextitem.
+        nextitem = currentitem.nextsibling()
+        # if there's no next sibling, try choosing the parent's nextsibling
         if nextitem is None:
             try:
-                nextitem = currentitem.parentitem().nextitem()
+                nextitem = currentitem.parentitem().nextsibling()
             except AttributeError:
-                # parentitem returned None, so nextitem() can't be called
+                # parentitem returned None, so nextsibling() can't be called
                 nextitem = None
         if nextitem is None:
-            # if no next item on parent-level, then no change...
+            # if parent has no next sibling, then no change...
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
