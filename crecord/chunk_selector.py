@@ -20,7 +20,7 @@ import textwrap
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
 import locale
-locale.setlocale(locale.LC_ALL, '')
+locale.setlocale(locale.LC_ALL, u'')
 
 from crpatch import patch, uiheader, uihunk, uihunkline
 
