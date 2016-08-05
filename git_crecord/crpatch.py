@@ -29,11 +29,7 @@ class linereader(object):
         return self.fp.readline().decode('UTF-8')
 
     def __iter__(self):
-        while True:
-            l = self.readline()
-            if not l:
-                break
-            yield l
+        return iter(self.readline, '')
 
 def scanpatch(fp):
     """like patch.iterhunks, but yield different events
@@ -48,10 +44,7 @@ def scanpatch(fp):
     def scanwhile(first, p):
         """scan lr while predicate holds"""
         lines = [first]
-        while True:
-            line = lr.readline()
-            if not line:
-                break
+        for line in iter(lr.readline, ''):
             if p(line):
                 lines.append(line)
             else:
@@ -59,10 +52,7 @@ def scanpatch(fp):
                 break
         return lines
 
-    while True:
-        line = lr.readline()
-        if not line:
-            break
+    for line in iter(lr.readline, ''):
         if line.startswith('diff --git a/'):
             def notheader(line):
                 s = line.split(None, 1)
