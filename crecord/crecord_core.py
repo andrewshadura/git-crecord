@@ -183,4 +183,5 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 os.rmdir(backupdir)
             except OSError:
                 pass
-    return cmdutil.commit(ui, repo, recordfunc, pats, opts)
+
+    return recordfunc(ui, repo, "", None, opts)
