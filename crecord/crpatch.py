@@ -255,13 +255,13 @@ class header(PatchNode):
 
         """
         for h in self.header:
-            if h.startswith('index '):
+            if h.startswith('GIT binary patch'):
                 return True
         return False
 
     def pretty(self, fp):
         for h in self.header:
-            if h.startswith('index '):
+            if h.startswith('GIT binary patch'):
                 fp.write(_('this modifies a binary file (all or nothing)\n'))
                 break
             if self.pretty_re.match(h):
