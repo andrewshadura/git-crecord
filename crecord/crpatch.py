@@ -1,11 +1,34 @@
 # stuff related specifically to patch manipulation / parsing
 from mercurial.i18n import _
-from mercurial import patch
 
 import cStringIO
 import re
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
+
+class linereader(object):
+    # simple class to allow pushing lines back into the input stream
+    def __init__(self, fp):
+        self.fp = fp
+        self.buf = []
+
+    def push(self, line):
+        if line is not None:
+            self.buf.append(line)
+
+    def readline(self):
+        if self.buf:
+            l = self.buf[0]
+            del self.buf[0]
+            return l
+        return self.fp.readline()
+
+    def __iter__(self):
+        while True:
+            l = self.readline()
+            if not l:
+                break
+            yield l
 
 def scanpatch(fp):
     """like patch.iterhunks, but yield different events
@@ -15,7 +38,7 @@ def scanpatch(fp):
     - ('hunk',    [hunk_lines])
     - ('range',   (-start,len, +start,len, diffp))
     """
-    lr = patch.linereader(fp)
+    lr = linereader(fp)
 
     def scanwhile(first, p):
         """scan lr while predicate holds"""
