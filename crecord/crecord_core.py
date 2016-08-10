@@ -19,13 +19,6 @@ import crpatch
 import chunk_selector
 
 def dorecord(ui, repo, commitfunc, *pats, **opts):
-    try:
-        if not ui.interactive():
-            raise util.Abort(_('running non-interactively, use commit instead'))
-    except TypeError: # backwards compatibility with hg 1.1
-        if not ui.interactive:
-            raise util.Abort(_('running non-interactively, use commit instead'))
-
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
@@ -39,11 +32,6 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
         """
-
-        merge = len(repo[None].parents()) > 1
-        if merge:
-            raise util.Abort(_('cannot partially commit a merge '
-                               '(use hg commit instead)'))
 
         # status gives back
         #   modified, added, removed, deleted, unknown, ignored, clean
