@@ -1,4 +1,4 @@
-from mercurial.i18n import _
+from gettext import gettext as _
 from . import util
 
 try:
