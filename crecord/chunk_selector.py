@@ -1051,9 +1051,9 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         except KeyError:
             pass
 
-        if opts['user'] != '':
+        if opts['author'] is not None:
             # make it accessible by self.ui.username()
-            self.ui.setconfig("ui", "username", opts['user'])
+            self.ui.setusername(opts['author'])
 
         self.commentText += textwrap.dedent("""
         
