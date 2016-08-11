@@ -1,5 +1,7 @@
 #!/usr/bin/python2
+from gettext import gettext as _
 from dulwich.repo import Repo
+import sys
 import crecord
 import crecord.util as util
 import argparse
@@ -36,4 +38,8 @@ args = parser.parse_args()
 
 repo = Repo(".")
 ui = Ui(repo)
-crecord.crecord(ui, repo, **(vars(args)))
+try:
+    crecord.crecord(ui, repo, **(vars(args)))
+except util.Abort as inst:
+    sys.stderr.write(_("abort: %s\n") % inst)
+    sys.exit(1)
