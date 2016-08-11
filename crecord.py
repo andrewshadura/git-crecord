@@ -15,8 +15,19 @@ class Ui:
         except KeyError:
             self._username = None
 
-    def warn(self, message):
-        print message
+    def debug(self, *msg, **opts):
+        for m in msg:
+            sys.stdout.write(m)
+
+    def status(self, *msg, **opts):
+        for m in msg:
+            sys.stdout.write(m)
+
+    def warn(self, *msg, **opts):
+        sys.stdout.flush()
+        for m in msg:
+            sys.stderr.write(m)
+        sys.stderr.flush()
 
     def setusername(self, username):
         self._username = username
