@@ -302,8 +302,6 @@ class header(PatchNode):
 
     def files(self):
         fromfile, tofile = self.diff_re.match(self.header[0]).groups()
-        if fromfile == tofile:
-            return [fromfile]
         return [fromfile, tofile]
 
     def filename(self):
@@ -560,7 +558,7 @@ class hunk(PatchNode):
 
 
 
-def parsepatch(changes, fp):
+def parsepatch(fp):
     "Parse a patch, returning a list of header and hunk objects."
     class parser(object):
         """patch parsing state machine"""
@@ -573,7 +571,6 @@ def parsepatch(changes, fp):
             self.before = []
             self.changedlines = []
             self.stream = []
-            self.modified, self.added, self.removed = changes
 
         def _range(self, (fromstart, fromend, tostart, toend, proc)):
             "Store range line info to associated instance variables."

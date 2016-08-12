@@ -14,6 +14,7 @@ import cStringIO
 import errno
 import os
 import tempfile
+import subprocess
 
 import crpatch
 import chunk_selector
@@ -33,28 +34,38 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         left in place, so the user can continue his work.
         """
 
-        # status gives back
-        #   modified, added, removed, deleted, unknown, ignored, clean
-        # we take only the first 3 of these
-        changes = repo.status(match=match)[:3]
-        modified, added, removed = changes
-        try:
-            # Mercurial >= 3.3 allow disabling format-changing diffopts
-            diffopts = patch.difffeatureopts(ui, opts=opts, section='crecord',
-                                             whitespace=True)
-        except AttributeError:
-            diffopts = patch.diffopts(ui, opts=opts, section='crecord')
-        diffopts.nodates = True
-        diffopts.git = True
-        chunks = patch.diff(repo, changes=changes, opts=diffopts)
-        fp = cStringIO.StringIO()
-        fp.write(''.join(chunks))
-        fp.seek(0)
+        git_args = ["git", "diff", "--binary"]
+
+        if opts['cached']:
+            git_args.append("--cached")
+
+        if not opts['index']:
+            git_args.append("HEAD")
+
+        p = subprocess.Popen(git_args, stdout=subprocess.PIPE)
+        fp = p.stdout
+
+        # 0. parse patch
+        fromfiles = set()
+        tofiles = set()
+
+        chunks = crpatch.parsepatch(fp)
+        for c in chunks:
+            if isinstance(c, crpatch.header):
+                fromfile, tofile = c.files()
+                fromfiles.add(fromfile)
+                tofiles.add(tofile)
+
+        added = tofiles - fromfiles
+        removed = fromfiles - tofiles
+        modified = tofiles - added - removed
+        changes = [modified, added, removed]
 
         # 1. filter patch, so we have intending-to apply subset of it
         chunks = crpatch.filterpatch(opts,
-                                     crpatch.parsepatch(changes, fp),
+                                     chunks,
                                      chunk_selector.chunkselector, ui)
+        p.wait()
         del fp
 
         contenders = set()
@@ -64,7 +75,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             except AttributeError:
                 pass
 
-        changed = changes[0] + changes[1] + changes[2]
+        changed = changes[0] | changes[1] | changes[2]
         newfiles = [f for f in changed if f in contenders]
 
         if not newfiles:
@@ -75,7 +86,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         # 2. backup changed files, so we can restore them in the end
         backups = {}
         newly_added_backups = {}
-        backupdir = repo.join('record-backups')
+        backupdir = os.path.join(repo.controldir(), 'record-backups')
         try:
             os.mkdir(backupdir)
         except OSError, err:
@@ -84,13 +95,13 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         try:
             # backup continues
             for f in newfiles:
-                if f not in (modified + added):
+                if f not in (modified | added):
                     continue
                 fd, tmpname = tempfile.mkstemp(prefix=f.replace('/', '_')+'.',
                                                dir=backupdir)
                 os.close(fd)
                 ui.debug('backup %r as %r\n' % (f, tmpname))
-                util.copyfile(repo.wjoin(f), tmpname)
+                util.copyfile(os.path.join(repo.path, f), tmpname)
                 if f in modified:
                     backups[f] = tmpname
                 elif f in added:
@@ -120,7 +131,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                *backups)
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
-                os.unlink(repo.wjoin(f))
+                os.unlink(os.path.join(repo.path, f))
 
             # 3b. (apply)
             if dopatch:
@@ -165,7 +176,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # it is important to first chdir to repo root -- we'll call a
             # highlevel command with list of pathnames relative to repo root
-            newfiles = [repo.wjoin(n) for n in newfiles]
+            newfiles = [os.path.join(repo.path, n) for n in newfiles]
             commitfunc(ui, repo, *newfiles, **opts)
 
             return 0
@@ -174,11 +185,11 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             try:
                 for realname, tmpname in backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
-                    util.copyfile(tmpname, repo.wjoin(realname))
+                    util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
                 for realname, tmpname in newly_added_backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
-                    util.copyfile(tmpname, repo.wjoin(realname))
+                    util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
                 os.rmdir(backupdir)
             except OSError:
