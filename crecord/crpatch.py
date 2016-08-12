@@ -248,6 +248,10 @@ class header(PatchNode):
 
         # flag is False if this header was ever unfolded from initial state
         self.neverUnfolded = True
+
+        # one-letter file status
+        self._changetype = None
+
     def binary(self):
         """
         Return True if the file represented by the header is a binary file.
@@ -312,6 +316,22 @@ class header(PatchNode):
         for h in self.header:
             if self.special_re.match(h):
                 return True
+
+    @property
+    def changetype(self):
+        if self._changetype is None:
+            self._changetype = "M"
+            for h in self.header:
+                if h.startswith('new file'):
+                    self._changetype = "A"
+                elif h.startswith('deleted file'):
+                    self._changetype = "D"
+                elif h.startswith('copy from'):
+                    self._changetype = "C"
+                elif h.startswith('rename from'):
+                    self._changetype = "R"
+
+        return self._changetype
 
     def nextSibling(self):
         numHeadersInPatch = len(self.patch)
@@ -630,12 +650,7 @@ def parsepatch(changes, fp):
             # create a new header and add it to self.stream
             self.header = header(hdr)
             fileName = self.header.filename()
-            if fileName in self.modified:
-                self.header.changetype = "M"
-            elif fileName in self.added:
-                self.header.changetype = "A"
-            elif fileName in self.removed:
-                self.header.changetype = "R"
+
             self.stream.append(self.header)
 
         def finished(self):
