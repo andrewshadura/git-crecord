@@ -42,7 +42,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         if not opts['index']:
             git_args.append("HEAD")
 
-        p = subprocess.Popen(git_args, stdout=subprocess.PIPE)
+        p = subprocess.Popen(git_args, stdout=subprocess.PIPE, close_fds=util.closefds)
         fp = p.stdout
 
         # 0. parse patch
