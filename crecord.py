@@ -1,9 +1,11 @@
 #!/usr/bin/python2
 from gettext import gettext as _
 from dulwich.repo import Repo
+import os
 import sys
 import crecord
 import crecord.util as util
+import tempfile
 import argparse
 
 class configproxy:
@@ -49,6 +51,34 @@ class Ui:
         if self._username is None:
             util.Abort(_("no name or email for the author was given"))
         return self._username
+
+    def geteditor(self):
+        editor = 'sensible-editor'
+        return (os.environ.get("GIT_EDITOR") or
+                self.config.get("core", "editor") or
+                os.environ.get("VISUAL") or
+                os.environ.get("EDITOR", editor))
+
+    def edit(self, text, user, extra=None, editform=None, pending=None):
+        (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
+                                      suffix=".txt", text=True)
+        try:
+            f = os.fdopen(fd, "w")
+            f.write(text)
+            f.close()
+
+            editor = self.geteditor()
+
+            os.system("%s \"%s\"" % (editor, name))
+            #           onerr=error.Abort, errprefix=_("edit failed")) # NOT IMPLEMENTED YET
+
+            f = open(name)
+            t = f.read()
+            f.close()
+        finally:
+            os.unlink(name)
+
+        return t
 
 parser = argparse.ArgumentParser(description='interactively select changes to commit')
 parser.add_argument('--author', default=None, help='override author for commit')
