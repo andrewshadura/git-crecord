@@ -6,10 +6,23 @@ import crecord
 import crecord.util as util
 import argparse
 
+class configproxy:
+    def __init__(self, config):
+        self._config = config
+
+    def get(self, section, item, default=None):
+        try:
+            return self._config.get(section, item)
+        except KeyError:
+            return default
+
+    def set(self, section, item, value, source=""):
+        return self._config.set(section, item, value)
+
 class Ui:
     def __init__(self, repo):
         self.repo = repo
-        self.config = repo.get_config_stack()
+        self.config = configproxy(repo.get_config_stack())
         try:
             self._username = "%s <%s>" % (self.config.get("user", "name"), self.config.get("user", "email"))
         except KeyError:
