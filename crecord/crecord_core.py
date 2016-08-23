@@ -93,6 +93,8 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             if err.errno != errno.EEXIST:
                 raise
         try:
+            index_backup = repo.open_index()
+
             # backup continues
             for f in newfiles:
                 if f not in (modified | added):
@@ -126,7 +128,6 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 fp.seek(0)
 
             # 3a. apply filtered patch to clean repo  (clean)
-            index_backup = repo.open_index()
             if backups:
                 util.system(['git', 'checkout', '-f', '--'] + newfiles,
                        onerr=util.Abort, errprefix=_("checkout failed"))
@@ -150,7 +151,6 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     else:
                         raise util.Abort(_('patch failed to apply'))
             del fp
-            index_backup.write()
 
             # 4. We prepared working directory according to filtered patch.
             #    Now is the time to delegate the job to commit/qrefresh or the like!
@@ -173,6 +173,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
                 os.rmdir(backupdir)
+                index_backup.write()
             except OSError:
                 pass
 
