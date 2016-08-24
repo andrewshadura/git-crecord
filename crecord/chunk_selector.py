@@ -829,7 +829,6 @@ class CursesChunkSelector(object):
             self.statuswin.resize(self.numstatuslines, self.xscreensize)
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
             self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
-            # TODO: try to resize commit message window if possible
         except curses.error:
             pass
 
@@ -1080,7 +1079,8 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         Method to be wrapped by curses.wrapper() for selecting chunks.
 
         """
-        signal.signal(signal.SIGWINCH, self.sigwinchhandler)
+        origsigwinchhandler = signal.signal(signal.SIGWINCH,
+                                            self.sigwinchhandler)
         self.stdscr = stdscr
         self.yscreensize, self.xscreensize = self.stdscr.getmaxyx()
 
@@ -1142,6 +1142,7 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 keypressed = "FOOBAR"
             if self.handlekeypressed(keypressed, opts):
                 break
+        signal.signal(signal.SIGWINCH, origsigwinchhandler)
 
         if opts['commit']:
             self.commitmessagewindow()
