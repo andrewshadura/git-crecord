@@ -1111,7 +1111,7 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
 
         if self.commentText != "":
             # strip out all lines beginning with 'HG:'
-            self.commentText = re.sub("(?m)^HG:.*(\n|$)", "", self.commentText)
+            self.commentText = re.sub("(?m)^#.*(\n|$)", "", self.commentText)
             # remove lines with whitespace (for test below)
             whitespaceRemoved = re.sub("(?m)^\s.*(\n|$)", "", self.commentText)
             # if there's anything left...
