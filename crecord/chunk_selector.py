@@ -898,7 +898,7 @@ The following are valid keystrokes:
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
-                      a : toggle amend mode (hg rev >= 2.2)
+                      a : toggle amend mode
                       c : commit selected changes
                       r : review/edit and commit selected changes
                       q : quit without committing (no changes will be made)
@@ -982,23 +982,14 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
         new changeset will be created (the normal commit behavior).
 
         """
-        try:
-            ver = float(util.version()[:3])
-        except:
-            # not sure if needed: for earlier versions that may not have
-            # util.vesrion()...
-            ver = 1
-        if ver < 2.19:
-            msg = ("The amend option is unavailable with hg versions < 2.2\n\n"
-                   "Press any key to continue.")
-        elif opts.get('amend') is None:
+        if opts.get('amend') is False:
             opts['amend'] = True
             msg = ("Amend option is turned on -- commiting the currently "
                    "selected changes will not create a new changeset, but "
                    "instead update the most recently committed changeset.\n\n"
                    "Press any key to continue.")
         elif opts.get('amend') is True:
-            opts['amend'] = None
+            opts['amend'] = False
             msg = ("Amend option is turned off -- commiting the currently "
                    "selected changes will create a new changeset.\n\n"
                    "Press any key to continue.")
