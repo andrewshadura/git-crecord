@@ -111,7 +111,7 @@ parser.add_argument('--date', default=None, help='override date for commit')
 parser.add_argument('-m', '--message', default='', help='commit message')
 parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--cached', action='store_true', default=False, help='diff staging')
+group.add_argument('--cached', '--staged', action='store_true', default=False, help='diff staging')
 group.add_argument('--index', action='store_true', default=False, help='diff against index')
 args = parser.parse_args()
 
