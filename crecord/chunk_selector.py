@@ -548,11 +548,11 @@ class CursesChunkSelector(object):
         try:
             printString(self.statuswin,
                         "SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                        "(space/A) toggle hunk/all",
+                        "(space/A) toggle hunk/all; (f)old/unfold",
                         pairName="legend")
             printString(self.statuswin,
-                        " (f)old/unfold; (c)ommit applied; (q)uit; (?) help "
-                        "| [X]=hunk applied **=folded",
+                        " (c)ommit/(s)tage applied; (q)uit; (?) help;"
+                        "toggle (a)mend mode | [X]=hunk applied **=folded",
                         pairName="legend")
         except curses.error:
             pass
@@ -900,6 +900,7 @@ The following are valid keystrokes:
                       m : edit / resume editing the commit message
                       a : toggle amend mode
                       c : commit selected changes
+                      s : stage selected changes
                       r : review/edit and commit selected changes
                       q : quit without committing (no changes will be made)
                       ? : help (what you're currently reading)"""
@@ -949,7 +950,7 @@ The following are valid keystrokes:
 
         return response
 
-    def confirmCommit(self, review=False):
+    def confirmCommit(self, review=False, stage=False):
         "Ask for 'Y' to be pressed to confirm commit. Return True if confirmed."
         if review:
             confirmText = (
@@ -962,6 +963,9 @@ NOTE: don't add/remove lines unless you also modify the range information.
       Failing to follow this rule will result in the commit aborting.
 
 Are you sure you want to review/edit and commit the selected changes [yN]? """)
+        elif stage:
+            confirmText = (
+                "Are you sure you want to stage the selected changes [yN]? ")
         else:
             confirmText = (
                 "Are you sure you want to commit the selected changes [yN]? ")
@@ -1082,9 +1086,16 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 self.toggleAmend(opts)
             elif keyPressed in ["c"]:
                 if self.confirmCommit():
+                    opts['commit'] = True
+                    break
+            elif keyPressed in ["s"]:
+                opts['commit'] = False
+                if self.confirmCommit(stage=True):
+                    opts['commit'] = False
                     break
             elif keyPressed in ["r"]:
                 if self.confirmCommit(review=True):
+                    opts['commit'] = True
                     opts['crecord_reviewpatch'] = True
                     break
             elif keyPressed in [' ']:
@@ -1099,6 +1110,9 @@ Are you sure you want to review/edit and commit the selected changes [yN]? """)
                 self.helpWindow()
             elif keyPressed in ["m"]:
                 self.commitMessageWindow()
+
+        if opts['commit']:
+            self.commitMessageWindow()
 
         if self.commentText != "":
             # strip out all lines beginning with 'HG:'
