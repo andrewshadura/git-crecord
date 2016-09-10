@@ -69,8 +69,8 @@ class Ui:
 
             editor = self.geteditor()
 
-            os.system("%s \"%s\"" % (editor, name))
-            #           onerr=error.Abort, errprefix=_("edit failed")) # NOT IMPLEMENTED YET
+            util.system("%s \"%s\"" % (editor, name),
+                       onerr=util.Abort, errprefix=_("edit failed"))
 
             f = open(name)
             t = f.read()
