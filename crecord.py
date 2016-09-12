@@ -131,6 +131,9 @@ args = parser.parse_args()
 
 repo = GitRepo(".")
 ui = Ui(repo)
+
+os.chdir(repo.path)
+
 try:
     crecord.crecord(ui, repo, **(vars(args)))
 except util.Abort as inst:
