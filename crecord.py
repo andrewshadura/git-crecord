@@ -80,6 +80,31 @@ class Ui:
 
         return t
 
+    def commit(self, *files, **opts):
+        (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
+                                      suffix=".txt", text=True)
+        try:
+            f = os.fdopen(fd, "w")
+            f.write(opts['message'])
+            f.close()
+
+            args = []
+            for k, v in opts.iteritems():
+                if k in ('author', 'date', 'amend'):
+                    if v is None:
+                        continue
+                    if isinstance(v, bool):
+                        if v is True:
+                            args.append('--%s' % k)
+                    else:
+                        args.append('--%s=%s' % (k, v))
+
+            util.system(['git', 'commit', '-F', name] + args + ['--'] + list(files),
+                       onerr=util.Abort, errprefix=_("commit failed"))
+
+        finally:
+            os.unlink(name)
+
 parser = argparse.ArgumentParser(description='interactively select changes to commit')
 parser.add_argument('--author', default=None, help='override author for commit')
 parser.add_argument('--date', default=None, help='override date for commit')

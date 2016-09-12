@@ -126,9 +126,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 fp.seek(0)
 
             # 3a. apply filtered patch to clean repo  (clean)
+            index_backup = repo.open_index()
             if backups:
-                cmdutil.revert(ui, repo, repo['.'], repo.dirstate.parents(),
-                               *backups)
+                util.system(['git', 'checkout', '-f', '--'] + newfiles,
+                       onerr=util.Abort, errprefix=_("checkout failed"))
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
                 os.unlink(os.path.join(repo.path, f))
@@ -138,38 +139,18 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    if hasattr(patch, 'workingbackend'): # detect 1.9
-                        patch.internalpatch(ui, repo, fp, strip=1, eolmode=None)
-                    else:
-                        pfiles = {}
-                        try:
-                            patch.internalpatch(ui, repo, fp, 1, eolmode=None)
-                        except (TypeError, AttributeError): # pre 17cea10c343e
-                            try:
-                                patch.internalpatch(ui, repo, fp, 1, repo.root,
-                                                    eolmode=None)
-                            except (TypeError, AttributeError): # pre 00a881581400
-                                try:
-                                    patch.internalpatch(fp, ui, 1, repo.root,
-                                                        files=pfiles, eolmode=None)
-                                except TypeError: # backwards compatible with hg 1.1
-                                    patch.internalpatch(fp, ui, 1,
-                                                        repo.root, files=pfiles)
-                        try:
-                            cmdutil.updatedir(ui, repo, pfiles)
-                        except AttributeError:
-                            try:
-                                patch.updatedir(ui, repo, pfiles)
-                            except AttributeError:
-                                # from 00a881581400 onwards
-                                pass
-                except patch.PatchError, err:
+                    p = subprocess.Popen(["git", "apply"], stdin=subprocess.PIPE, close_fds=util.closefds)
+                    p.stdin.write(fp.read())
+                    p.stdin.close()
+                    p.wait()
+                except Exception as err:
                     s = str(err)
                     if s:
                         raise util.Abort(s)
                     else:
                         raise util.Abort(_('patch failed to apply'))
             del fp
+            index_backup.write()
 
             # 4. We prepared working directory according to filtered patch.
             #    Now is the time to delegate the job to commit/qrefresh or the like!
@@ -177,7 +158,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             # it is important to first chdir to repo root -- we'll call a
             # highlevel command with list of pathnames relative to repo root
             newfiles = [os.path.join(repo.path, n) for n in newfiles]
-            commitfunc(ui, repo, *newfiles, **opts)
+            ui.commit(*newfiles, **opts)
 
             return 0
         finally:
