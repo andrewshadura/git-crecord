@@ -107,7 +107,16 @@ class Ui:
 
 prog = os.path.basename(sys.argv[0]).replace('-', ' ')
 
-parser = argparse.ArgumentParser(description='interactively select changes to commit', prog=prog)
+subcommand = prog.split(' ')[-1].replace('.py', '')
+
+if subcommand == 'crecord':
+    action = 'commit or stage'
+elif subcommand == 'cstage':
+    action = 'stage'
+elif subcommand == 'cunstage':
+    action = 'keep staged'
+
+parser = argparse.ArgumentParser(description='interactively select changes to %s' % action, prog=prog)
 parser.add_argument('--author', default=None, help='override author for commit')
 parser.add_argument('--date', default=None, help='override date for commit')
 parser.add_argument('-m', '--message', default='', help='commit message')
