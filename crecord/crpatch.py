@@ -227,9 +227,9 @@ class header(PatchNode):
     XXX shoudn't we move this to mercurial/patch.py ?
     """
     diff_re = re.compile('diff --git a/(.*) b/(.*)$')
-    allhunks_re = re.compile('(?:index|new file|deleted file) ')
+    allhunks_re = re.compile('(?:GIT binary patch|new file|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
-    special_re = re.compile('(?:index|new|deleted|copy|rename) ')
+    special_re = re.compile('(?:GIT binary patch|new|deleted|copy|rename) ')
 
     def __init__(self, header):
         self.header = header
