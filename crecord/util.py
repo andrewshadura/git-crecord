@@ -8,12 +8,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version
 
+from gettext import gettext as _
 import os
 import subprocess
 import shutil
 import sys
 
 closefds = os.name == 'posix'
+
+def explainexit(code):
+    """return a 2-tuple (desc, code) describing a subprocess status
+    (codes from kill are negative - not os.system/wait encoding)"""
+    if (code < 0) and (os.name == 'posix'):
+        return _("killed by signal %d") % -code, -code
+    else:
+        return _("exited with status %d") % code, code
 
 class Abort(Exception):
     pass
@@ -26,15 +35,16 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
 
     if isinstance(cmd, list):
         shell = False
+        prog = os.path.basename(cmd[0])
     else:
         shell = True
+        prog = os.path.basename(cmd.split(None, 1)[0])
 
     rc = subprocess.call(cmd, shell=shell, close_fds=closefds,
                          cwd=cwd)
     if rc and onerr:
-        errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
-                            '')
-                            # explainexit(rc)[0])
+        errmsg = '%s %s' % (prog,
+                            explainexit(rc)[0])
         if errprefix:
             errmsg = '%s: %s' % (errprefix, errmsg)
         raise onerr(errmsg)
