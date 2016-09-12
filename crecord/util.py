@@ -50,6 +50,28 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
         raise onerr(errmsg)
     return rc
 
+def systemcall(cmd, onerr=None, errprefix=None):
+    try:
+        sys.stdout.flush()
+    except Exception:
+        pass
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, close_fds=closefds)
+    out = ''
+    for line in iter(p.stdout.readline, ''):
+        out = out + line
+    p.wait()
+    rc = p.returncode
+
+    if rc and onerr:
+        errmsg = '%s %s' % (os.path.basename(cmd[0]),
+                            explainexit(rc)[0])
+        if errprefix:
+            errmsg = '%s: %s' % (errprefix, errmsg)
+        raise onerr(errmsg)
+
+    return out
+
 def copyfile(src, dest, hardlink=False, copystat=False):
     '''copy a file, preserving mode and optionally other stat info like
     atime/mtime'''
