@@ -552,7 +552,7 @@ class CursesChunkSelector(object):
                         pairName="legend")
             printString(self.statuswin,
                         " (c)ommit/(s)tage applied; (q)uit; (?) help;"
-                        "toggle (a)mend mode | [X]=hunk applied **=folded",
+                        "toggle (a)mend mode | [x]=hunk applied **=folded",
                         pairName="legend")
         except curses.error:
             pass
@@ -582,7 +582,7 @@ class CursesChunkSelector(object):
             if not isinstance(item, HunkLine) and item.partial:
                 checkBox = "[~]"
             else:
-                checkBox = "[X]"
+                checkBox = "[x]"
         else:
             checkBox = "[ ]"
 
