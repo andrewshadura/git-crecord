@@ -8,23 +8,20 @@ import crecord.util as util
 import tempfile
 import argparse
 
-class configproxy:
-    def __init__(self, config):
-        self._config = config
-
+class Config:
     def get(self, section, item, default=None):
         try:
-            return self._config.get(section, item)
+            return util.systemcall(['git', 'config', '--get', '%s.%s' % (section, item)], onerr=KeyError).rstrip('\n')
         except KeyError:
             return default
 
     def set(self, section, item, value, source=""):
-        return self._config.set(section, item, value)
+        raise NotImplementedError
 
 class Ui:
     def __init__(self, repo):
         self.repo = repo
-        self.config = configproxy(repo.get_config_stack())
+        self.config = Config()
         try:
             self._username = "%s <%s>" % (self.config.get("user", "name"), self.config.get("user", "email"))
         except KeyError:
