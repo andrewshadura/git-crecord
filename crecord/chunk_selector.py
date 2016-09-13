@@ -926,7 +926,9 @@ The following are valid keystrokes:
         curses.raw()
         curses.def_prog_mode()
         curses.endwin()
-        self.commentText = self.ui.edit(self.commentText, self.ui.username())
+        self.commentText = self.ui.edit(self.commentText, self.ui.username(),
+                                        name=os.path.join(self.ui.repo.controldir(),
+                                                          'COMMIT_EDITMSG'))
         curses.cbreak()
         self.stdscr.refresh()
         self.stdscr.keypad(1) # allow arrow-keys to continue to function
