@@ -92,6 +92,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         except OSError, err:
             if err.errno != errno.EEXIST:
                 raise
+        index_backup = None
         try:
             index_backup = repo.open_index()
 
@@ -159,6 +160,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             # highlevel command with list of pathnames relative to repo root
             newfiles = [os.path.join(repo.path, n) for n in newfiles]
             ui.commit(*newfiles, **opts)
+            index_backup = None
 
             return 0
         finally:
@@ -173,8 +175,9 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
                 os.rmdir(backupdir)
-                index_backup.write()
-            except OSError:
+                if index_backup:
+                    index_backup.write()
+            except OSError, NameError:
                 pass
 
     return recordfunc(ui, repo, "", None, opts)
