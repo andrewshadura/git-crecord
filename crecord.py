@@ -129,13 +129,21 @@ group.add_argument('--cached', '--staged', action='store_true', default=False, h
 group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
 args = parser.parse_args()
 
+opts = vars(args)
+
+if subcommand == 'cstage':
+    opts['index'] = True
+
+if subcommand == 'cunstage':
+    opts['cached'] = True
+
 repo = GitRepo(".")
 ui = Ui(repo)
 
 os.chdir(repo.path)
 
 try:
-    crecord.crecord(ui, repo, **(vars(args)))
+    crecord.crecord(ui, repo, **(opts))
 except util.Abort as inst:
     sys.stderr.write(_("abort: %s\n") % inst)
     sys.exit(1)
