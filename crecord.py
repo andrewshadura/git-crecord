@@ -59,11 +59,16 @@ class Ui:
                 os.environ.get("VISUAL") or
                 os.environ.get("EDITOR", editor))
 
-    def edit(self, text, user, extra=None, editform=None, pending=None):
-        (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
+    def edit(self, text, user, extra=None, name=None):
+        fd = None
+        if name is None:
+            (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
                                       suffix=".txt", text=True)
         try:
-            f = os.fdopen(fd, "w")
+            if fd is not None:
+                f = os.fdopen(fd, "w")
+            else:
+                f = open(name, "w")
             f.write(text)
             f.close()
 
@@ -76,7 +81,8 @@ class Ui:
             t = f.read()
             f.close()
         finally:
-            os.unlink(name)
+            if fd is not None:
+                os.unlink(name)
 
         return t
 
