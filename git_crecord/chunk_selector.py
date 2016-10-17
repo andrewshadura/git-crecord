@@ -1092,7 +1092,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
         self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
 
-        # initialize selecteitemendline (initial start-line is 0)
+        # initialize selecteditemendline (initial start-line is 0)
         self.selecteditemendline = self.getnumlinesdisplayed(
             self.currentselecteditem, recursechildren=False)
 
