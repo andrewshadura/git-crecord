@@ -33,6 +33,9 @@ class GitIndex(object):
     def write(self):
         GitTree(self._indextree).read()
 
+    def backup_tree(self):
+        return self._indextree
+
 class GitRepo(object):
     def __init__(self, path):
         try:

@@ -160,6 +160,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             # highlevel command with list of pathnames relative to repo root
             newfiles = [os.path.join(repo.path, n) for n in newfiles]
             ui.commit(*newfiles, **opts)
+            ui.debug('previous staging contents backed up as tree %r\n' % index_backup.backup_tree())
             index_backup = None
 
             return 0
