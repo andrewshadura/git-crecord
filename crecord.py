@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 from gettext import gettext as _
-from dulwich.repo import Repo
+from crecord.gitrepo import GitRepo
 import os
 import sys
 import crecord
@@ -129,7 +129,7 @@ group.add_argument('--cached', '--staged', action='store_true', default=False, h
 group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
 args = parser.parse_args()
 
-repo = Repo(".")
+repo = GitRepo(".")
 ui = Ui(repo)
 try:
     crecord.crecord(ui, repo, **(vars(args)))
