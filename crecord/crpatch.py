@@ -4,7 +4,10 @@ from gettext import gettext as _
 import cStringIO
 import re
 
-lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
+class PatchError(Exception):
+    pass
+
+lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
 
 class linereader(object):
     # simple class to allow pushing lines back into the input stream
@@ -79,7 +82,7 @@ def scanpatch(fp):
             if m:
                 yield 'range', m.groups()
             else:
-                raise patch.PatchError('unknown patch content: %r' % line)
+                raise PatchError('unknown patch content: %r' % line)
 
 class PatchNode(object):
     """Abstract Class for Patch Graph Nodes
@@ -681,7 +684,7 @@ def parsepatch(fp):
         try:
             p.transitions[state][newstate](p, data)
         except KeyError:
-            raise patch.PatchError('unhandled transition: %s -> %s' %
+            raise PatchError('unhandled transition: %s -> %s' %
                                    (state, newstate))
         state = newstate
     return p.finished()
