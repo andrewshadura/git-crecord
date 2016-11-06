@@ -101,13 +101,21 @@ class Ui:
         (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
                                       suffix=".txt", text=True)
         try:
+            args = []
+
             f = os.fdopen(fd, "w")
+            if opts['message'] is not None:
+                f.write(opts['message'])
+            else:
+                args.append('--edit')
             f.write(opts['template'])
             f.close()
 
-            args = []
+            if opts['cleanup'] is None:
+                opts['cleanup'] = 'strip'
+
             for k, v in opts.iteritems():
-                if k in ('author', 'date', 'amend', 'message', 'signoff'):
+                if k in ('author', 'date', 'amend', 'signoff', 'cleanup'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -116,7 +124,7 @@ class Ui:
                     else:
                         args.append('--%s=%s' % (k, v))
 
-            util.system(['git', 'commit', '--no-status', '-t', name] + args + ['--'] + list(files),
+            util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
                        onerr=util.Abort, errprefix=_("commit failed"))
 
         finally:
@@ -141,6 +149,7 @@ parser.add_argument('--amend', action='store_true', default=False, help='amend p
 parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
 parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
 parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
+parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
 group = parser.add_mutually_exclusive_group()
 group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
 group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)

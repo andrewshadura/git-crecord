@@ -156,13 +156,16 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3c. prepare the commit message template
             opts['template'] = textwrap.dedent("""
-            
-            # Please enter the commit message for your changes.
-            # Lines starting with '#' will be ignored.
-            # You can save this message, and edit it again later before committing.
-            # After exiting the editor, you will return to the crecord patch view.
-            # --
-            # Author: %s""" % ui.username())
+            # Please enter the commit message for your changes. Lines starting
+            # with '#' will be ignored, and an empty message aborts the commit.
+            # On branch master
+            #
+            # Changes to be committed:
+            %s
+            #""" % "\n".join("#\tmodified:   " + f for f in newfiles))
+
+            if (opts['message'] is None) and (opts['amend']):
+                opts['template'] = util.systemcall(['git', 'show', '--pretty=tformat:%B', '--no-patch']) + opts['template']
 
             # 4. We prepared working directory according to filtered patch.
             #    Now is the time to delegate the job to commit/qrefresh or the like!
