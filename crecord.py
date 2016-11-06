@@ -22,14 +22,25 @@ class Ui:
     def __init__(self, repo):
         self.repo = repo
         self.config = Config()
+        self.debuglevel = 0
         try:
             self._username = "%s <%s>" % (self.config.get("user", "name"), self.config.get("user", "email"))
         except KeyError:
             self._username = None
 
     def debug(self, *msg, **opts):
+        if self.debuglevel < 2:
+            return
         for m in msg:
             sys.stdout.write(m)
+
+    def info(self, *msg, **opts):
+        if self.debuglevel < 1:
+            return
+        sys.stdout.flush()
+        for m in msg:
+            sys.stderr.write(m)
+        sys.stderr.flush()
 
     def status(self, *msg, **opts):
         for m in msg:
@@ -40,6 +51,9 @@ class Ui:
         for m in msg:
             sys.stderr.write(m)
         sys.stderr.flush()
+
+    def setdebuglevel(self, level):
+        self.debuglevel = level
 
     def setusername(self, username):
         self._username = username
@@ -124,6 +138,8 @@ parser.add_argument('--author', default=None, help='override author for commit')
 parser.add_argument('--date', default=None, help='override date for commit')
 parser.add_argument('-m', '--message', default='', help='commit message')
 parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
+parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
+parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
 group = parser.add_mutually_exclusive_group()
 group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
 group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
@@ -139,6 +155,7 @@ if subcommand == 'cunstage':
 
 repo = GitRepo(".")
 ui = Ui(repo)
+ui.setdebuglevel(opts['verbose'])
 
 os.chdir(repo.path)
 
