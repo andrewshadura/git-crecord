@@ -1,6 +1,14 @@
-=======
-crecord
-=======
+===========
+Git crecord
+===========
+
+About
+-----
+
+**git-crecord** is a Git subcommand which allows users to interactively
+select changes to commit or stage using a ncurses-based text user interface.
+It is a port of the Mercurial crecord extension originally written by
+Mark Edgington.
 
 License
 -------
@@ -14,8 +22,8 @@ version.
 This program is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  See the GNU General Public License for more
-details.
+PURPOSE.  See the GNU General Public License version 2
+text for more details.
 
 You should have received a copy of the GNU General Public
 License along with this package; if not, write to the Free
@@ -28,4 +36,3 @@ Authors
 For the list of contributors, see CONTRIBUTORS.
 
 .. include:: CONTRIBUTORS
-    :literal:
