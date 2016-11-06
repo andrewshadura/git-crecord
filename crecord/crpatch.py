@@ -84,43 +84,41 @@ def scanpatch(fp):
             else:
                 raise PatchError('unknown patch content: %r' % line)
 
-class PatchNode(object):
+class patchnode(object):
     """Abstract Class for Patch Graph Nodes
     (i.e. PatchRoot, header, hunk, HunkLine)
     """
 
-    def firstChild(self):
+    def firstchild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-    def lastChild(self):
+    def lastchild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-    def allChildren(self):
+    def allchildren(self):
         "Return a list of all of the direct children of this node"
         raise NotImplementedError("method must be implemented by subclass")
-    def nextSibling(self):
+
+    def nextsibling(self):
         """
         Return the closest next item of the same type where there are no items
         of different types between the current item and this closest item.
         If no such item exists, return None.
-
         """
         raise NotImplementedError("method must be implemented by subclass")
 
-    def prevSibling(self):
+    def prevsibling(self):
         """
         Return the closest previous item of the same type where there are no
         items of different types between the current item and this closest item.
         If no such item exists, return None.
-
         """
         raise NotImplementedError("method must be implemented by subclass")
 
-    def parentItem(self):
+    def parentitem(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-
-    def nextItem(self, constrainLevel=True, skipFolded=True):
+    def nextitem(self, constrainlevel=True, skipfolded=True):
         """
         If constrainLevel == True, return the closest next item
         of the same type where there are no items of different types between
@@ -135,46 +133,45 @@ class PatchNode(object):
         the next item.
 
         If it is not possible to get the next item, return None.
-
         """
         try:
-            itemFolded = self.folded
+            itemfolded = self.folded
         except AttributeError:
-            itemFolded = False
-        if constrainLevel:
-            return self.nextSibling()
-        elif skipFolded and itemFolded:
-            nextItem = self.nextSibling()
-            if nextItem is None:
+            itemfolded = False
+        if constrainlevel:
+            return self.nextsibling()
+        elif skipfolded and itemfolded:
+            nextitem = self.nextsibling()
+            if nextitem is None:
                 try:
-                    nextItem = self.parentItem().nextSibling()
+                    nextitem = self.parentitem().nextsibling()
                 except AttributeError:
-                    nextItem = None
-            return nextItem
+                    nextitem = None
+            return nextitem
         else:
             # try child
-            item = self.firstChild()
+            item = self.firstchild()
             if item is not None:
                 return item
 
             # else try next sibling
-            item = self.nextSibling()
+            item = self.nextsibling()
             if item is not None:
                 return item
 
             try:
                 # else try parent's next sibling
-                item = self.parentItem().nextSibling()
+                item = self.parentitem().nextsibling()
                 if item is not None:
                     return item
 
                 # else return grandparent's next sibling (or None)
-                return self.parentItem().parentItem().nextSibling()
+                return self.parentitem().parentitem().nextsibling()
 
             except AttributeError: # parent and/or grandparent was None
                 return None
 
-    def prevItem(self, constrainLevel=True, skipFolded=True):
+    def previtem(self, constrainlevel=True, skipfolded=True):
         """
         If constrainLevel == True, return the closest previous item
         of the same type where there are no items of different types between
@@ -189,42 +186,41 @@ class PatchNode(object):
         next item.
 
         If it is not possible to get the previous item, return None.
-
         """
-        if constrainLevel:
-            return self.prevSibling()
+        if constrainlevel:
+            return self.prevsibling()
         else:
             # try previous sibling's last child's last child,
             # else try previous sibling's last child, else try previous sibling
-            prevSibling = self.prevSibling()
-            if prevSibling is not None:
-                prevSiblingLastChild = prevSibling.lastChild()
-                if ((prevSiblingLastChild is not None) and
-                    not prevSibling.folded):
-                    prevSiblingLCLC = prevSiblingLastChild.lastChild()
-                    if ((prevSiblingLCLC is not None) and
-                        not prevSiblingLastChild.folded):
-                        return prevSiblingLCLC
+            prevsibling = self.prevsibling()
+            if prevsibling is not None:
+                prevsiblinglastchild = prevsibling.lastchild()
+                if ((prevsiblinglastchild is not None) and
+                    not prevsibling.folded):
+                    prevsiblinglclc = prevsiblinglastchild.lastchild()
+                    if ((prevsiblinglclc is not None) and
+                        not prevsiblinglastchild.folded):
+                        return prevsiblinglclc
                     else:
-                        return prevSiblingLastChild
+                        return prevsiblinglastchild
                 else:
-                    return prevSibling
+                    return prevsibling
 
             # try parent (or None)
-            return self.parentItem()
+            return self.parentitem()
 
-class Patch(PatchNode, list): # TODO: rename PatchRoot
+class patch(patchnode, list): # TODO: rename PatchRoot
     """
     List of header objects representing the patch.
 
     """
-    def __init__(self, headerList):
-        self.extend(headerList)
+    def __init__(self, headerlist):
+        self.extend(headerlist)
         # add parent patch object reference to each header
         for header in self:
             header.patch = self
 
-class header(PatchNode):
+class uiheader(patchnode):
     """patch header
 
     XXX shoudn't we move this to mercurial/patch.py ?
@@ -250,7 +246,7 @@ class header(PatchNode):
         self.patch = None
 
         # flag is False if this header was ever unfolded from initial state
-        self.neverUnfolded = True
+        self.neverunfolded = True
 
         # one-letter file status
         self._changetype = None
@@ -283,7 +279,7 @@ class header(PatchNode):
                 break
             fp.write(h)
 
-    def prettyStr(self):
+    def prettystr(self):
         x = cStringIO.StringIO()
         self.pretty(x)
         return x.getvalue()
@@ -334,52 +330,53 @@ class header(PatchNode):
 
         return self._changetype
 
-    def nextSibling(self):
-        numHeadersInPatch = len(self.patch)
-        indexOfThisHeader = self.patch.index(self)
+    def nextsibling(self):
+        numheadersinpatch = len(self.patch)
+        indexofthisheader = self.patch.index(self)
 
-        if indexOfThisHeader < numHeadersInPatch - 1:
-            nextHeader = self.patch[indexOfThisHeader + 1]
-            return nextHeader
+        if indexofthisheader < numheadersinpatch - 1:
+            nextheader = self.patch[indexofthisheader + 1]
+            return nextheader
         else:
             return None
 
-    def prevSibling(self):
-        indexOfThisHeader = self.patch.index(self)
-        if indexOfThisHeader > 0:
-            previousHeader = self.patch[indexOfThisHeader - 1]
-            return previousHeader
+    def prevsibling(self):
+        indexofthisheader = self.patch.index(self)
+        if indexofthisheader > 0:
+            previousheader = self.patch[indexofthisheader - 1]
+            return previousheader
         else:
             return None
 
-    def parentItem(self):
+    def parentitem(self):
         """
         There is no 'real' parent item of a header that can be selected,
         so return None.
         """
         return None
 
-    def firstChild(self):
+    def firstchild(self):
         "Return the first child of this item, if one exists.  Otherwise None."
         if len(self.hunks) > 0:
             return self.hunks[0]
         else:
             return None
 
-    def lastChild(self):
+    def lastchild(self):
         "Return the last child of this item, if one exists.  Otherwise None."
         if len(self.hunks) > 0:
             return self.hunks[-1]
         else:
             return None
 
-    def allChildren(self):
+    def allchildren(self):
         "Return a list of all of the direct children of this node"
         return self.hunks
-class HunkLine(PatchNode):
+
+class uihunkline(patchnode):
     "Represents a changed line in a hunk"
-    def __init__(self, lineText, hunk):
-        self.lineText = lineText
+    def __init__(self, linetext, hunk):
+        self.linetext = linetext
         self.applied = True
         # the parent hunk to which this line belongs
         self.hunk = hunk
@@ -387,46 +384,43 @@ class HunkLine(PatchNode):
         # in the prevItem method.
         self.folded = False
 
-    def prettyStr(self):
-        return self.lineText
+    def prettystr(self):
+        return self.linetext
 
-    def nextSibling(self):
-        numLinesInHunk = len(self.hunk.changedLines)
-        indexOfThisLine = self.hunk.changedLines.index(self)
+    def nextsibling(self):
+        numlinesinhunk = len(self.hunk.changedlines)
+        indexofthisline = self.hunk.changedlines.index(self)
 
-        if (indexOfThisLine < numLinesInHunk - 1):
-            nextLine = self.hunk.changedLines[indexOfThisLine + 1]
-            return nextLine
+        if (indexofthisline < numlinesinhunk - 1):
+            nextline = self.hunk.changedlines[indexofthisline + 1]
+            return nextline
         else:
             return None
 
-    def prevSibling(self):
-        indexOfThisLine = self.hunk.changedLines.index(self)
-        if indexOfThisLine > 0:
-            previousLine = self.hunk.changedLines[indexOfThisLine - 1]
-            return previousLine
+    def prevsibling(self):
+        indexofthisline = self.hunk.changedlines.index(self)
+        if indexofthisline > 0:
+            previousline = self.hunk.changedlines[indexofthisline - 1]
+            return previousline
         else:
             return None
 
-    def parentItem(self):
+    def parentitem(self):
         "Return the parent to the current item"
         return self.hunk
 
-    def firstChild(self):
+    def firstchild(self):
         "Return the first child of this item, if one exists.  Otherwise None."
         # hunk-lines don't have children
         return None
 
-    def lastChild(self):
+    def lastchild(self):
         "Return the last child of this item, if one exists.  Otherwise None."
         # hunk-lines don't have children
         return None
 
-class hunk(PatchNode):
-    """patch hunk
-
-    XXX shouldn't we merge this with patch.hunk ?
-    """
+class uihunk(patchnode):
+    """ui patch hunk, wraps a hunk and keep track of ui behavior """
     maxcontext = 3
 
     def __init__(self, header, fromline, toline, proc, before, hunk, after):
@@ -440,7 +434,7 @@ class hunk(PatchNode):
         self.fromline, self.before = trimcontext(fromline, before)
         self.toline, self.after = trimcontext(toline, after)
         self.proc = proc
-        self.changedLines = [HunkLine(line, self) for line in hunk]
+        self.changedlines = [uihunkline(line, self) for line in hunk]
         self.added, self.removed = self.countchanges()
         # used at end for detecting how many removed lines were un-applied
         self.originalremoved = self.removed
@@ -453,63 +447,64 @@ class hunk(PatchNode):
         # children are partially applied (i.e. some applied, some not).
         self.partial = False
 
-    def nextSibling(self):
-        numHunksInHeader = len(self.header.hunks)
-        indexOfThisHunk = self.header.hunks.index(self)
+    def nextsibling(self):
+        numhunksinheader = len(self.header.hunks)
+        indexofthishunk = self.header.hunks.index(self)
 
-        if (indexOfThisHunk < numHunksInHeader - 1):
-            nextHunk = self.header.hunks[indexOfThisHunk + 1]
-            return nextHunk
+        if (indexofthishunk < numhunksinheader - 1):
+            nexthunk = self.header.hunks[indexofthishunk + 1]
+            return nexthunk
         else:
             return None
 
-    def prevSibling(self):
-        indexOfThisHunk = self.header.hunks.index(self)
-        if indexOfThisHunk > 0:
-            previousHunk = self.header.hunks[indexOfThisHunk - 1]
-            return previousHunk
+    def prevsibling(self):
+        indexofthishunk = self.header.hunks.index(self)
+        if indexofthishunk > 0:
+            previoushunk = self.header.hunks[indexofthishunk - 1]
+            return previoushunk
         else:
             return None
 
-    def parentItem(self):
+    def parentitem(self):
         "Return the parent to the current item"
         return self.header
 
-    def firstChild(self):
+    def firstchild(self):
         "Return the first child of this item, if one exists.  Otherwise None."
-        if len(self.changedLines) > 0:
-            return self.changedLines[0]
+        if len(self.changedlines) > 0:
+            return self.changedlines[0]
         else:
             return None
 
-    def lastChild(self):
+    def lastchild(self):
         "Return the last child of this item, if one exists.  Otherwise None."
-        if len(self.changedLines) > 0:
-            return self.changedLines[-1]
+        if len(self.changedlines) > 0:
+            return self.changedlines[-1]
         else:
             return None
 
-    def allChildren(self):
+    def allchildren(self):
         "Return a list of all of the direct children of this node"
-        return self.changedLines
+        return self.changedlines
+
     def countchanges(self):
-        """changedLines -> (n+,n-)"""
-        add = len([l for l in self.changedLines if l.applied
-                   and l.prettyStr()[0] == '+'])
-        rem = len([l for l in self.changedLines if l.applied
-                   and l.prettyStr()[0] == '-'])
+        """changedlines -> (n+,n-)"""
+        add = len([l for l in self.changedlines if l.applied
+                   and l.prettystr()[0] == '+'])
+        rem = len([l for l in self.changedlines if l.applied
+                   and l.prettystr()[0] == '-'])
         return add, rem
 
-    def getFromToLine(self):
+    def getfromtoline(self):
         # calculate the number of removed lines converted to context lines
-        removedConvertedToContext = self.originalremoved - self.removed
+        removedconvertedtocontext = self.originalremoved - self.removed
 
-        contextLen = (len(self.before) + len(self.after) +
-                      removedConvertedToContext)
+        contextlen = (len(self.before) + len(self.after) +
+                      removedconvertedtocontext)
         if self.after and self.after[-1] == '\\ No newline at end of file\n':
-            contextLen -= 1
-        fromlen = contextLen + self.removed
-        tolen = contextLen + self.added
+            contextlen -= 1
+        fromlen = contextlen + self.removed
+        tolen = contextlen + self.added
 
         # Diffutils manual, section "2.2.2.2 Detailed Description of Unified
         # Format": "An empty hunk is considered to end at the line that
@@ -517,41 +512,41 @@ class hunk(PatchNode):
         #
         # So, if either of hunks is empty, decrease its line start. --immerrr
         # But only do this if fromline > 0, to avoid having, e.g fromline=-1.
-        fromline,toline = self.fromline, self.toline
+        fromline, toline = self.fromline, self.toline
         if fromline != 0:
             if fromlen == 0:
                 fromline -= 1
             if tolen == 0:
                 toline -= 1
 
-        fromToLine = '@@ -%d,%d +%d,%d @@%s\n' % (
+        fromtoline = '@@ -%d,%d +%d,%d @@%s\n' % (
             fromline, fromlen, toline, tolen,
             self.proc and (' ' + self.proc))
-        return fromToLine
+        return fromtoline
 
     def write(self, fp):
-        # updated self.added/removed, which are used by getFromToLine()
+        # updated self.added/removed, which are used by getfromtoline()
         self.added, self.removed = self.countchanges()
-        fp.write(self.getFromToLine())
+        fp.write(self.getfromtoline())
 
-        hunkLineList = []
+        hunklinelist = []
         # add the following to the list: (1) all applied lines, and
         # (2) all unapplied removal lines (convert these to context lines)
-        for changedLine in self.changedLines:
-            changedLineStr = changedLine.prettyStr()
-            if changedLine.applied:
-                hunkLineList.append(changedLineStr)
-            elif changedLineStr[0] == "-":
-                hunkLineList.append(" " + changedLineStr[1:])
+        for changedline in self.changedlines:
+            changedlinestr = changedline.prettystr()
+            if changedline.applied:
+                hunklinelist.append(changedlinestr)
+            elif changedlinestr[0] == "-":
+                hunklinelist.append(" " + changedlinestr[1:])
 
-        fp.write(''.join(self.before + hunkLineList + self.after))
+        fp.write(''.join(self.before + hunklinelist + self.after))
 
     pretty = write
 
     def filename(self):
         return self.header.filename()
 
-    def prettyStr(self):
+    def prettystr(self):
         x = cStringIO.StringIO()
         self.pretty(x)
         return x.getvalue()
@@ -596,8 +591,8 @@ def parsepatch(fp):
             next hunk we parse.
 
             """
-            h = hunk(self.header, self.fromline, self.toline, self.proc,
-                     self.before, self.changedlines, self.context)
+            h = uihunk(self.header, self.fromline, self.toline, self.proc,
+                       self.before, self.changedlines, self.context)
             self.header.hunks.append(h)
             self.stream.append(h)
             self.fromline += len(self.before) + h.removed + len(self.context)
@@ -648,7 +643,7 @@ def parsepatch(fp):
                 self.add_new_hunk()
 
             # create a new header and add it to self.stream
-            self.header = header(hdr)
+            self.header = uiheader(hdr)
             fileName = self.header.filename()
 
             self.stream.append(self.header)
@@ -694,7 +689,7 @@ def filterpatch(opts, chunks, chunk_selector, ui):
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
     # with curses.  Create a list of headers only.
-    headers = [c for c in chunks if isinstance(c, header)]
+    headers = [c for c in chunks if isinstance(c, uiheader)]
 
     # if there are no changed files
     if len(headers) == 0:
