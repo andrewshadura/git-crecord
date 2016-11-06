@@ -102,12 +102,12 @@ class Ui:
                                       suffix=".txt", text=True)
         try:
             f = os.fdopen(fd, "w")
-            f.write(opts['message'])
+            f.write(opts['template'])
             f.close()
 
             args = []
             for k, v in opts.iteritems():
-                if k in ('author', 'date', 'amend'):
+                if k in ('author', 'date', 'amend', 'message'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -116,7 +116,7 @@ class Ui:
                     else:
                         args.append('--%s=%s' % (k, v))
 
-            util.system(['git', 'commit', '-F', name] + args + ['--'] + list(files),
+            util.system(['git', 'commit', '--no-status', '-t', name] + args + ['--'] + list(files),
                        onerr=util.Abort, errprefix=_("commit failed"))
 
         finally:
@@ -136,7 +136,7 @@ elif subcommand == 'cunstage':
 parser = argparse.ArgumentParser(description='interactively select changes to %s' % action, prog=prog)
 parser.add_argument('--author', default=None, help='override author for commit')
 parser.add_argument('--date', default=None, help='override date for commit')
-parser.add_argument('-m', '--message', default='', help='commit message')
+parser.add_argument('-m', '--message', default=None, help='commit message')
 parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
 parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
 parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')

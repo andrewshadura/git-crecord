@@ -110,9 +110,6 @@ class CursesChunkSelector(object):
         # the first line of the pad which is visible on the screen
         self.firstlineofpadtoprint = 0
 
-        # stores optional text for a commit comment provided by the user
-        self.commenttext = ""
-
         # if the last 'toggle all' command caused all changes to be applied
         self.waslasttoggleallapplied = True
 
@@ -884,7 +881,6 @@ The following are valid keystrokes:
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                  ctrl-l : scroll the selected line to the top of the screen
-                      m : edit / resume editing the commit message
                       a : toggle amend mode
                       c : commit selected changes
                       s : stage selected changes
@@ -907,18 +903,19 @@ The following are valid keystrokes:
         except curses.error:
             pass
 
-    def commitmessagewindow(self):
+    def commitmessagewindow(self, commenttext):
         "Create a temporary commit message editing window on the screen."
             
         curses.raw()
         curses.def_prog_mode()
         curses.endwin()
-        self.commenttext = self.ui.edit(self.commenttext, self.ui.username(),
-                                        name=os.path.join(self.ui.repo.controldir(),
-                                                          'COMMIT_EDITMSG'))
+        commenttext = self.ui.edit(commenttext, self.ui.username(),
+                                   name=os.path.join(self.ui.repo.controldir(),
+                                                     'COMMIT_EDITMSG'))
         curses.cbreak()
         self.stdscr.refresh()
         self.stdscr.keypad(1) # allow arrow-keys to continue to function
+        return commenttext
 
     def confirmationwindow(self, windowtext):
         "Display an informational window, then wait for and return a keypress."
@@ -1060,8 +1057,6 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             self.helpwindow()
             self.stdscr.clear()
             self.stdscr.refresh()
-        elif keypressed in ["m"]:
-            self.commitmessagewindow()
         elif curses.unctrl(keypressed) in ["^L"]:
             # scroll the current line to the top of the screen
             self.scrolllines(self.selecteditemstartline)
@@ -1109,16 +1104,11 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         # option which enables/disables patch-review (in editor) step
         opts['crecord_reviewpatch'] = False
 
-        try:
-            self.commenttext = opts['message']
-        except KeyError:
-            pass
-
         if opts['author'] is not None:
             # make it accessible by self.ui.username()
             self.ui.setusername(opts['author'])
 
-        self.commenttext += textwrap.dedent("""
+        opts['template'] = textwrap.dedent("""
         
         # Please enter the commit message for your changes.
         # Lines starting with '#' will be ignored.
@@ -1136,15 +1126,3 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             if self.handlekeypressed(keypressed, opts):
                 break
         signal.signal(signal.SIGWINCH, origsigwinchhandler)
-
-        if opts['commit']:
-            self.commitmessagewindow()
-
-        if self.commenttext != "":
-            # strip out all lines beginning with 'HG:'
-            self.commenttext = re.sub("(?m)^#.*(\n|$)", "", self.commenttext)
-            # remove lines with whitespace (for test below)
-            whitespaceremoved = re.sub("(?m)^\s.*(\n|$)", "", self.commenttext)
-            # if there's anything left...
-            if whitespaceremoved != "":
-                opts['message'] = self.commenttext
