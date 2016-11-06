@@ -9,7 +9,7 @@
 
 '''text-gui based change selection during commit or qrefresh'''
 from mercurial.i18n import _
-from mercurial import cmdutil, mdiff, util
+from . import util
 import cStringIO
 import errno
 import os

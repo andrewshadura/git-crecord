@@ -1,9 +1,6 @@
 from mercurial.i18n import _
-from mercurial import util
+from . import util
 
-# accomodate older versions where encoding module doesn't yet exist
-from mercurial import demandimport
-demandimport.ignore.append('mercurial.encoding')
 try:
     import mercurial.encoding as encoding
     code = encoding.encoding
