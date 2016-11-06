@@ -14,6 +14,7 @@ import cStringIO
 import errno
 import os
 import tempfile
+import textwrap
 import subprocess
 
 import crpatch
@@ -152,6 +153,16 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     else:
                         raise util.Abort(_('patch failed to apply'))
             del fp
+
+            # 3c. prepare the commit message template
+            opts['template'] = textwrap.dedent("""
+            
+            # Please enter the commit message for your changes.
+            # Lines starting with '#' will be ignored.
+            # You can save this message, and edit it again later before committing.
+            # After exiting the editor, you will return to the crecord patch view.
+            # --
+            # Author: %s""" % ui.username())
 
             # 4. We prepared working directory according to filtered patch.
             #    Now is the time to delegate the job to commit/qrefresh or the like!

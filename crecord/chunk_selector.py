@@ -15,7 +15,6 @@ import fcntl
 import struct
 import termios
 import signal
-import textwrap
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
@@ -1107,15 +1106,6 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         if opts['author'] is not None:
             # make it accessible by self.ui.username()
             self.ui.setusername(opts['author'])
-
-        opts['template'] = textwrap.dedent("""
-        
-        # Please enter the commit message for your changes.
-        # Lines starting with '#' will be ignored.
-        # You can save this message, and edit it again later before committing.
-        # After exiting the editor, you will return to the crecord patch view.
-        # --
-        # Author: %s""" % self.ui.username())
 
         while True:
             self.updatescreen()

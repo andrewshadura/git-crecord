@@ -107,7 +107,7 @@ class Ui:
 
             args = []
             for k, v in opts.iteritems():
-                if k in ('author', 'date', 'amend', 'message'):
+                if k in ('author', 'date', 'amend', 'message', 'signoff'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -140,6 +140,7 @@ parser.add_argument('-m', '--message', default=None, help='commit message')
 parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
 parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
 parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
+parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
 group = parser.add_mutually_exclusive_group()
 group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
 group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
