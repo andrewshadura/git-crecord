@@ -36,14 +36,15 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         """
 
         git_args = ["git", "diff", "--binary"]
+        git_base = []
 
         if opts['cached']:
             git_args.append("--cached")
 
         if not opts['index']:
-            git_args.append("HEAD")
+            git_base.append("HEAD")
 
-        p = subprocess.Popen(git_args, stdout=subprocess.PIPE, close_fds=util.closefds)
+        p = subprocess.Popen(git_args + git_base, stdout=subprocess.PIPE, close_fds=util.closefds)
         fp = p.stdout
 
         # 0. parse patch
@@ -131,7 +132,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
-                util.system(['git', 'checkout', '-f', '--'] + newfiles,
+                util.system(['git', 'checkout', '-f'] + git_base + ['--'] + [f for f in newfiles if f not in added],
                        onerr=util.Abort, errprefix=_("checkout failed"))
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
@@ -162,7 +163,8 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             #
             # Changes to be committed:
             %s
-            #""" % "\n".join("#\tmodified:   " + f for f in newfiles))
+            #""" % "".join("""
+            #\tmodified:   """ + f for f in newfiles))
 
             if (opts['message'] is None) and (opts['amend']):
                 opts['template'] = util.systemcall(['git', 'show', '--pretty=tformat:%B', '--no-patch']) + opts['template']

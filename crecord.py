@@ -107,6 +107,7 @@ class Ui:
             if opts['message'] is not None:
                 f.write(opts['message'])
             else:
+                f.write('\n')
                 args.append('--edit')
             f.write(opts['template'])
             f.close()
@@ -124,6 +125,8 @@ class Ui:
                     else:
                         args.append('--%s=%s' % (k, v))
 
+            util.system(['git', 'add', '-N', '--'] + list(files),
+                       onerr=util.Abort, errprefix=_("add failed"))
             util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
                        onerr=util.Abort, errprefix=_("commit failed"))
 
