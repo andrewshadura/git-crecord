@@ -55,8 +55,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         for c in chunks:
             if isinstance(c, crpatch.uiheader):
                 fromfile, tofile = c.files()
-                fromfiles.add(fromfile)
-                tofiles.add(tofile)
+                if fromfile is not None:
+                    fromfiles.add(fromfile)
+                if tofile is not None:
+                    tofiles.add(tofile)
 
         added = tofiles - fromfiles
         removed = fromfiles - tofiles
@@ -117,8 +119,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             all_backups.update(backups)
             all_backups.update(newly_added_backups)
             for c in chunks:
-                if c.filename() in all_backups:
-                    c.write(fp)
+                c.write(fp)
             dopatch = fp.tell()
             fp.seek(0)
 

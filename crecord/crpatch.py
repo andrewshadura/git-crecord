@@ -282,10 +282,15 @@ class uiheader(patchnode):
 
     def files(self):
         fromfile, tofile = self.diff_re.match(self.header[0]).groups()
+        if self.changetype == 'D':
+            tofile = None
+        elif self.changetype == 'A':
+            fromfile = None
         return [fromfile, tofile]
 
     def filename(self):
-        return self.files()[-1]
+        files = self.files()
+        return files[1] or files[0]
 
     def __repr__(self):
         return '<header %s>' % (' '.join(map(repr, self.files())))
