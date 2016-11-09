@@ -17,6 +17,31 @@ After committing or staging the selected changes, the unselected changes are
 still present in your working copy, so you can use crecord multiple times to
 split large changes into several smaller changesets.
 
+Installation
+------------
+
+git-crecord currently lacks a proper installer.
+
+To install it manually, install the required Python 2.7, and symlink
+``crecord.py`` into the directory where Git can find it, which can be
+a directory in your ``$PATH``::
+
+    $ ln -s $PWD/crecord.py ~/.local/bin/git-crecord
+
+Now you should have a new subcommand available for you.
+
+When you're ready to commit some of your changes, type::
+
+    git crecord
+
+This will bring up a window where you can view all of your changes, and
+select/de-select changes.
+You can find more information on how to use it in the built-in help
+(press the '?' key).
+
+``git crecord`` supports most popular options of ``git commit``: ``--author=``,
+``--date=``, ``--message=``, ``--amend``, ``--signoff``.
+
 License
 -------
 
