@@ -103,12 +103,15 @@ class Ui:
         try:
             args = []
 
+            # git-commit doesn't play nice with empty lines
+            # and comments in the commit message when --edit
+            # is used with --file;
+            # to work that around, use --template when
+            # no message is specified and --file otherwise.
+
             f = os.fdopen(fd, "w")
             if opts['message'] is not None:
                 f.write(opts['message'])
-            else:
-                f.write('\n')
-                args.append('--edit')
             f.write(opts['template'])
             f.close()
 
@@ -127,8 +130,12 @@ class Ui:
 
             util.system(['git', 'add', '-N', '--'] + list(files),
                        onerr=util.Abort, errprefix=_("add failed"))
-            util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
-                       onerr=util.Abort, errprefix=_("commit failed"))
+            if opts['message'] is None:
+                util.system(['git', 'commit', '--no-status', '-t', name] + args + ['--'] + list(files),
+                           onerr=util.Abort, errprefix=_("commit failed"))
+            else:
+                util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
+                           onerr=util.Abort, errprefix=_("commit failed"))
 
         finally:
             os.unlink(name)
