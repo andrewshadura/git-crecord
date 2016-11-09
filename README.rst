@@ -10,6 +10,13 @@ select changes to commit or stage using a ncurses-based text user interface.
 It is a port of the Mercurial crecord extension originally written by
 Mark Edgington.
 
+git-crecord allows you to interactively choose among the changes you have made
+(with line-level granularity), and commit, stage or unstage only those changes
+you select.
+After committing or staging the selected changes, the unselected changes are
+still present in your working copy, so you can use crecord multiple times to
+split large changes into several smaller changesets.
+
 License
 -------
 
