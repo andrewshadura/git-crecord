@@ -1,0 +1,16 @@
+Unfinished, not working, not implemented, things to do:
+
+ * staging/unstaging:
+
+   - needs to select the correct base to apply patches
+     to (partly implemented)
+   - needs to actually stage changes (not implemented)
+   - needs to leave the working directory in the correct
+     state (partly implemented, needs testing)
+
+ * scrolling with PgUp/PgDn leads to an incorrect display
+   state sometimes (upstream issue?)
+
+ * add setup.py or Makefile to make installing easier
+
+ * reduce the upstream delta
