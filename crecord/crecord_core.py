@@ -157,12 +157,13 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3c. prepare the commit message template
             opts['template'] = textwrap.dedent("""
+            
             # Please enter the commit message for your changes. Lines starting
             # with '#' will be ignored, and an empty message aborts the commit.
             # On branch master
             #
             # Changes to be committed:
-            %s
+            #%s
             #""" % "".join("""
             #\tmodified:   """ + f for f in newfiles))
 
