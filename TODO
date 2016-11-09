@@ -1,5 +1,7 @@
 Unfinished, not working, not implemented, things to do:
 
+ * when commit is interrupted, staging isn't always restored
+
  * staging/unstaging:
 
    - needs to select the correct base to apply patches
