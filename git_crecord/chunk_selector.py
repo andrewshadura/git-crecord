@@ -111,7 +111,7 @@ class CursesChunkSelector(object):
         # keeps track of the number of lines in the pad
         self.numpadlines = None
 
-        self.numstatuslines = 2
+        self.numstatuslines = 1
 
         # keep a running count of the number of lines printed to the pad
         # (used for determining when the selected item begins/ends)
@@ -527,6 +527,9 @@ class CursesChunkSelector(object):
                        "(space/A) toggle hunk/all; (f)old/unfold"),
                      _(" (c)ommit/(s)tage applied; (q)uit; (?) help;"
                        "toggle (a)mend mode | [x]=hunk applied **=folded")]
+        if len(lines) != self.numstatuslines:
+            self.numstatuslines = len(lines)
+            self.statuswin.resize(self.numstatuslines, self.xscreensize)
         return [util.ellipsis(l, self.xscreensize - 1) for l in lines]
 
     def updatescreen(self):
@@ -551,7 +554,7 @@ class CursesChunkSelector(object):
             self.updatescroll()
             self.chunkpad.refresh(self.firstlineofpadtoprint, 0,
                                   self.numstatuslines, 0,
-                                  self.yscreensize + 1 - self.numstatuslines,
+                                  self.yscreensize - self.numstatuslines,
                                   self.xscreensize)
         except curses.error:
             pass
