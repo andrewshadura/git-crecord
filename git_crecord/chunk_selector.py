@@ -74,6 +74,10 @@ def chunkselector(opts, headerlist, ui):
     # ncurses does not restore signal handler for SIGTSTP
     signal.signal(signal.SIGTSTP, f)
 
+_headermessages = { # {operation: text}
+    'crecord': _('Select hunks to commit'),
+}
+
 class CursesChunkSelector(object):
     def __init__(self, headerlist, ui):
         # put the headers into a patch object
@@ -524,7 +528,7 @@ class CursesChunkSelector(object):
         """-> [str]. return segments"""
         selected = self.currentselecteditem.applied
         segments = [
-            _('Select hunks to record'),
+            _headermessages[self.opts['operation']],
             '-',
             _('[x]=selected **=collapsed'),
             _('c: confirm'),
