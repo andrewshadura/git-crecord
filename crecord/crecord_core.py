@@ -144,7 +144,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    p = subprocess.Popen(["git", "apply"], stdin=subprocess.PIPE, close_fds=util.closefds)
+                    p = subprocess.Popen(["git", "apply", "--whitespace=nowarn"], stdin=subprocess.PIPE, close_fds=util.closefds)
                     p.stdin.write(fp.read())
                     p.stdin.close()
                     p.wait()
