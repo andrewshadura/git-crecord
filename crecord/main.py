@@ -1,10 +1,9 @@
-#!/usr/bin/python2
 from gettext import gettext as _
-from crecord.gitrepo import GitRepo
+from .gitrepo import GitRepo
 import os
 import sys
-import crecord
-import crecord.util as util
+from . import crecord_core
+from . import util
 import tempfile
 import argparse
 
@@ -180,7 +179,7 @@ ui.setdebuglevel(opts['verbose'])
 os.chdir(repo.path)
 
 try:
-    crecord.crecord(ui, repo, **(opts))
+    crecord_core.dorecord(ui, repo, None, **(opts))
 except util.Abort as inst:
     sys.stderr.write(_("abort: %s\n") % inst)
     sys.exit(1)

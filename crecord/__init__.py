@@ -8,7 +8,7 @@
 # Much of this extension is based on Bryan O'Sullivan's record extension.
 
 '''text-gui based change selection during commit'''
-from crecord_core import dorecord
+from .crecord_core import dorecord
 
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit

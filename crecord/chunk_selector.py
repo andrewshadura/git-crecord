@@ -21,7 +21,7 @@ import signal
 import locale
 locale.setlocale(locale.LC_ALL, u'')
 
-from crpatch import patch, uiheader, uihunk, uihunkline
+from .crpatch import patch, uiheader, uihunk, uihunkline
 
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':

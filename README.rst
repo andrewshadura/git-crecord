@@ -23,10 +23,10 @@ Installation
 git-crecord currently lacks a proper installer.
 
 To install it manually, install the required Python 2.7, and symlink
-``crecord.py`` into the directory where Git can find it, which can be
+``git-crecord`` into the directory where Git can find it, which can be
 a directory in your ``$PATH``::
 
-    $ ln -s $PWD/crecord.py ~/.local/bin/git-crecord
+    $ ln -s $PWD/git-crecord ~/.local/bin/git-crecord
 
 Now you should have a new subcommand available for you.
 
