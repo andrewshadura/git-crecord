@@ -1,12 +1,8 @@
 from gettext import gettext as _
 from . import util
 
-try:
-    import mercurial.encoding as encoding
-    code = encoding.encoding
-except ImportError:
-    encoding = util
-    code = encoding._encoding
+from . import encoding
+code = encoding.encoding
 
 import os
 import re
