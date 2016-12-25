@@ -8,7 +8,7 @@
 # Much of this extension is based on Bryan O'Sullivan's record extension.
 
 '''text-gui based change selection during commit or qrefresh'''
-from mercurial.i18n import _
+from gettext import gettext as _
 from . import util
 import cStringIO
 import errno
