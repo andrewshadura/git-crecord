@@ -1,3 +1,4 @@
 #!/usr/bin/python2
 
-import crecord.main
+from crecord.main import main
+main()

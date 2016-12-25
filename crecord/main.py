@@ -139,47 +139,49 @@ class Ui:
         finally:
             os.unlink(name)
 
-prog = os.path.basename(sys.argv[0]).replace('-', ' ')
 
-subcommand = prog.split(' ')[-1].replace('.py', '')
+def main():
+    prog = os.path.basename(sys.argv[0]).replace('-', ' ')
 
-if subcommand == 'crecord':
-    action = 'commit or stage'
-elif subcommand == 'cstage':
-    action = 'stage'
-elif subcommand == 'cunstage':
-    action = 'keep staged'
+    subcommand = prog.split(' ')[-1].replace('.py', '')
 
-parser = argparse.ArgumentParser(description='interactively select changes to %s' % action, prog=prog)
-parser.add_argument('--author', default=None, help='override author for commit')
-parser.add_argument('--date', default=None, help='override date for commit')
-parser.add_argument('-m', '--message', default=None, help='commit message')
-parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
-parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
-parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
-parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
-parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
-group = parser.add_mutually_exclusive_group()
-group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
-group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
-args = parser.parse_args()
+    if subcommand == 'crecord':
+        action = 'commit or stage'
+    elif subcommand == 'cstage':
+        action = 'stage'
+    elif subcommand == 'cunstage':
+        action = 'keep staged'
 
-opts = vars(args)
+    parser = argparse.ArgumentParser(description='interactively select changes to %s' % action, prog=prog)
+    parser.add_argument('--author', default=None, help='override author for commit')
+    parser.add_argument('--date', default=None, help='override date for commit')
+    parser.add_argument('-m', '--message', default=None, help='commit message')
+    parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
+    parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
+    parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
+    parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
+    parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
+    group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
+    args = parser.parse_args()
 
-if subcommand == 'cstage':
-    opts['index'] = True
+    opts = vars(args)
 
-if subcommand == 'cunstage':
-    opts['cached'] = True
+    if subcommand == 'cstage':
+        opts['index'] = True
 
-repo = GitRepo(".")
-ui = Ui(repo)
-ui.setdebuglevel(opts['verbose'])
+    if subcommand == 'cunstage':
+        opts['cached'] = True
 
-os.chdir(repo.path)
+    repo = GitRepo(".")
+    ui = Ui(repo)
+    ui.setdebuglevel(opts['verbose'])
 
-try:
-    crecord_core.dorecord(ui, repo, None, **(opts))
-except util.Abort as inst:
-    sys.stderr.write(_("abort: %s\n") % inst)
-    sys.exit(1)
+    os.chdir(repo.path)
+
+    try:
+        crecord_core.dorecord(ui, repo, None, **(opts))
+    except util.Abort as inst:
+        sys.stderr.write(_("abort: %s\n") % inst)
+        sys.exit(1)
