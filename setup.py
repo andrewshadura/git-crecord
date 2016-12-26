@@ -62,7 +62,7 @@ setup(
     ] + man_files('git-*.rst'),
     entry_points = {
         'console_scripts': [
-            'git-crecord = crecord.main:main'
+            'git-crecord = git_crecord.main:main'
         ]
     }
 )

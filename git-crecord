@@ -1,4 +1,4 @@
 #!/usr/bin/python2
 
-from crecord.main import main
+from git_crecord.main import main
 main()
