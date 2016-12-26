@@ -20,11 +20,19 @@ split large changes into several smaller changesets.
 Installation
 ------------
 
-git-crecord currently lacks a proper installer.
+git-crecord assumes you have Python 2.7 installed as ``/usr/bin/python2``.
 
-To install it manually, install the required Python 2.7, and symlink
-``git-crecord`` into the directory where Git can find it, which can be
-a directory in your ``$PATH``::
+git-crecord ships with a setup.py installer based on setuptools.
+To install git-crecord, simply type:
+
+    $ ./setup.py install
+
+This will install git-crecord itself, its manpage and this README file into
+their proper locations.
+
+Alternatively, to install it manually, symlink ``git-crecord`` into
+the directory where Git can find it, which can be a directory in
+your ``$PATH``::
 
     $ ln -s $PWD/git-crecord ~/.local/bin/git-crecord
 

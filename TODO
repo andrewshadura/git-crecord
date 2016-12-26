@@ -13,6 +13,4 @@ Unfinished, not working, not implemented, things to do:
  * scrolling with PgUp/PgDn leads to an incorrect display
    state sometimes (upstream issue?)
 
- * add setup.py or Makefile to make installing easier
-
  * reduce the upstream delta
