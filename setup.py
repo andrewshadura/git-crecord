@@ -35,7 +35,7 @@ __name__ = "git-crecord"
 
 setup(
     name = __name__,
-    version = "0.1",
+    version = "20161226.0",
     author = 'Andrew Shadura',
     author_email = 'andrew@shadura.me',
     url = 'https://github.com/andrewshadura/git-crecord',
