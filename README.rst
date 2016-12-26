@@ -23,7 +23,7 @@ Installation
 git-crecord assumes you have Python 2.7 installed as ``/usr/bin/python2``.
 
 git-crecord ships with a setup.py installer based on setuptools.
-To install git-crecord, simply type:
+To install git-crecord, simply type::
 
     $ ./setup.py install
 
