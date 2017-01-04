@@ -1,14 +1,14 @@
 #!/usr/bin/python2
 
 import os
-from glob import glob as abs_glob
+import fnmatch
 from setuptools import setup, find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 def glob(fname):
-    return abs_glob(os.path.join(os.path.dirname(__file__), fname))
+    return fnmatch.filter(os.listdir(os.path.dirname(__file__)), fname)
 
 def generate_manpage(fname):
     import docutils.core
