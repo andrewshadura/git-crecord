@@ -31,6 +31,15 @@ def man_path(fname):
 def man_files(pattern):
     return map(man_path, map(generate_manpage, glob(pattern)))
 
+# monkey patch setuptools to use distutils owner/group functionality
+from setuptools.command import sdist
+sdist_org = sdist.sdist
+class sdist_new(sdist_org):
+    def initialize_options(self):
+        sdist_org.initialize_options(self)
+        self.owner = self.group = 'root'
+sdist.sdist = sdist_new
+
 __name__ = "git-crecord"
 
 setup(
