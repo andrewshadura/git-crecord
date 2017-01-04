@@ -1,8 +1,6 @@
 #!/usr/bin/python2
 
 import os
-import subprocess
-import docutils.core
 from glob import glob as abs_glob
 from setuptools import setup, find_packages
 
@@ -13,6 +11,7 @@ def glob(fname):
     return abs_glob(os.path.join(os.path.dirname(__file__), fname))
 
 def generate_manpage(fname):
+    import docutils.core
     import re
     matches = re.compile(r'^:Manual section: *([0-9]*)', re.MULTILINE).search(read(fname))
     if matches:
