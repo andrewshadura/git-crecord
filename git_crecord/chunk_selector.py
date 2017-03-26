@@ -1112,15 +1112,19 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         Method to be wrapped by curses.wrapper() for selecting chunks.
 
         """
+        self.opts = opts
+
         origsigwinchhandler = signal.signal(signal.SIGWINCH,
                                             self.sigwinchhandler)
+        return self._main(stdscr)
+        signal.signal(signal.SIGWINCH, origsigwinchhandler)
+
+    def _main(self, stdscr):
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
         self.initerr = None
         self.yscreensize, self.xscreensize = self.stdscr.getmaxyx()
-
-        self.opts = opts
 
         curses.start_color()
         curses.use_default_colors()
