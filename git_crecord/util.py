@@ -2,7 +2,7 @@
 #
 #  Copyright 2006, 2015 Matt Mackall <mpm@selenic.com>
 #  Copyright 2007 Eric St-Jean <esj@wwd.ca>
-#  Copyright 2009 Mads Kiilerich <mads@kiilerich.com>
+#  Copyright 2009, 2011 Mads Kiilerich <mads@kiilerich.com>
 #  Copyright 2015 Pierre-Yves David <pierre-yves.david@fb.com>
 #
 # This software may be used and distributed according to the terms of the
@@ -104,3 +104,7 @@ def copyfile(src, dest, hardlink=False, copystat=False):
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
     return encoding.trim(text, maxlength, ellipsis='...')
+
+_notset = object()
+def safehasattr(thing, attr):
+    return getattr(thing, attr, _notset) is not _notset

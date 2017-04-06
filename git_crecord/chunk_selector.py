@@ -1114,12 +1114,15 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         """
         self.opts = opts
 
-        origsigwinchhandler = signal.signal(signal.SIGWINCH,
-                                            self.sigwinchhandler)
+        origsigwinch = sentinel = object()
+        if util.safehasattr(signal, 'SIGWINCH'):
+             origsigwinch = signal.signal(signal.SIGWINCH,
+                                          self.sigwinchhandler)
         try:
             return self._main(stdscr)
         finally:
-            signal.signal(signal.SIGWINCH, origsigwinchhandler)
+            if origsigwinch is not sentinel:
+                signal.signal(signal.SIGWINCH, origsigwinch)
 
     def _main(self, stdscr):
         self.stdscr = stdscr
