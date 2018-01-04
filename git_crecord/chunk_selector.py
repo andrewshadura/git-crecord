@@ -1204,7 +1204,10 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         self.yscreensize, self.xscreensize = self.stdscr.getmaxyx()
 
         curses.start_color()
-        curses.use_default_colors()
+        try:
+            curses.use_default_colors()
+        except curses.error:
+            self.usecolor = False
 
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
