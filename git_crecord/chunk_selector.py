@@ -115,6 +115,7 @@ class CursesChunkSelector(object):
         # maps custom nicknames of color-pairs to curses color-pair values
         self.colorpairnames = {}
 
+        self.usecolor = True
         # the currently selected header, hunk, or hunk-line
         self.currentselecteditem = self.headerlist[0]
 
@@ -940,11 +941,19 @@ class CursesChunkSelector(object):
                 colorpair = self.colorpairs[(fgcolor, bgcolor)]
             else:
                 pairindex = len(self.colorpairs) + 1
-                curses.init_pair(pairindex, fgcolor, bgcolor)
-                colorpair = self.colorpairs[(fgcolor, bgcolor)] = (
-                    curses.color_pair(pairindex))
-                if name is not None:
-                    self.colorpairnames[name] = curses.color_pair(pairindex)
+                if self.usecolor:
+                    curses.init_pair(pairindex, fgcolor, bgcolor)
+                    colorpair = self.colorpairs[(fgcolor, bgcolor)] = (
+                        curses.color_pair(pairindex))
+                    if name is not None:
+                        self.colorpairnames[name] = curses.color_pair(pairindex)
+                else:
+                    cval = 0
+                    if name is not None:
+                        if name == 'selected':
+                            cval = curses.A_REVERSE
+                        self.colorpairnames[name] = cval
+                    colorpair = self.colorpairs[(fgcolor, bgcolor)] = cval
 
         # add attributes if possible
         if attrlist is None:
