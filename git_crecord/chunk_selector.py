@@ -838,7 +838,7 @@ class CursesChunkSelector(object):
         # temporarily disable printing to windows by printstring
         patchdisplaystring = self.printitem(item, ignorefolding,
                                             recursechildren, towin=False)
-        numlines = len(patchdisplaystring) / self.xscreensize
+        numlines = len(patchdisplaystring) // self.xscreensize
         return numlines
 
     def sigwinchhandler(self, n, frame):
