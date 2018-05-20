@@ -645,7 +645,7 @@ class CursesChunkSelector(object):
             # skip remainder of output
             return outstr
 
-        # print out lines of the chunk preceeding changed-lines
+        # print out lines of the chunk preceding changed-lines
         for line in hunk.before:
             linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
@@ -965,7 +965,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         """
         once we scrolled with pg up pg down we can be pointing outside of the
         display zone. we print the patch with towin=False to compute the
-        location of the selected item eventhough it is outside of the displayed
+        location of the selected item even though it is outside of the displayed
         zone and then update the scroll.
         """
         self.printitem(towin=False)
@@ -981,13 +981,13 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         """
         if opts.get('amend') is False:
             opts['amend'] = True
-            msg = ("Amend option is turned on -- commiting the currently "
+            msg = ("Amend option is turned on -- committing the currently "
                    "selected changes will not create a new changeset, but "
                    "instead update the most recently committed changeset.\n\n"
                    "Press any key to continue.")
         elif opts.get('amend') is True:
             opts['amend'] = False
-            msg = ("Amend option is turned off -- commiting the currently "
+            msg = ("Amend option is turned off -- committing the currently "
                    "selected changes will create a new changeset.\n\n"
                    "Press any key to continue.")
 
