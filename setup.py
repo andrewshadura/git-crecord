@@ -8,7 +8,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 def glob(fname):
-    return fnmatch.filter(os.listdir(os.path.dirname(__file__)), fname)
+    return fnmatch.filter(os.listdir(os.path.abspath(os.path.dirname(__file__))), fname)
 
 def generate_manpage(src, dst):
     import docutils.core
