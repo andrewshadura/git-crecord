@@ -97,48 +97,34 @@ class Ui:
         return t
 
     def commit(self, *files, **opts):
-        (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
-                                      suffix=".txt", text=True)
-        try:
-            args = []
+        args = []
 
-            # git-commit doesn't play nice with empty lines
-            # and comments in the commit message when --edit
-            # is used with --file;
-            # to work that around, use --template when
-            # no message is specified and --file otherwise.
+        for k, v in opts.items():
+            if k in ('author', 'date', 'amend', 'signoff'):
+                if v is None:
+                    continue
+                if isinstance(v, bool):
+                    if v is True:
+                        args.append('--%s' % k)
+                else:
+                    args.append('--%s=%s' % (k, v))
 
-            f = os.fdopen(fd, "w")
-            if opts['message'] is not None:
+        util.system(['git', 'add', '-N', '--'] + list(files),
+                   onerr=util.Abort, errprefix=_("add failed"))
+        if opts['message'] is None:
+            util.system(['git', 'commit'] + args + ['--'] + list(files),
+                       onerr=util.Abort, errprefix=_("commit failed"))
+        else:
+            #if the user provides a commit message as an argument, store it in a temp file and
+            #pass the message to git that way
+            (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
+                                          suffix=".txt", text=True)
+            try:
+                f = os.fdopen(fd, "w")
                 f.write(opts['message'])
-            f.write(opts['template'])
-            f.close()
-
-            if opts['cleanup'] is None:
-                opts['cleanup'] = 'strip'
-
-            for k, v in opts.iteritems():
-                if k in ('author', 'date', 'amend', 'signoff', 'cleanup'):
-                    if v is None:
-                        continue
-                    if isinstance(v, bool):
-                        if v is True:
-                            args.append('--%s' % k)
-                    else:
-                        args.append('--%s=%s' % (k, v))
-
-            util.system(['git', 'add', '-N', '--'] + list(files),
-                       onerr=util.Abort, errprefix=_("add failed"))
-            if opts['message'] is None:
-                util.system(['git', 'commit', '--no-status', '-t', name] + args + ['--'] + list(files),
-                           onerr=util.Abort, errprefix=_("commit failed"))
-            else:
-                util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
-                           onerr=util.Abort, errprefix=_("commit failed"))
-
-        finally:
-            os.unlink(name)
-
+                f.close()
+            finally:
+                os.unlink(name)
 
 def main():
     prog = os.path.basename(sys.argv[0]).replace('-', ' ')
@@ -160,7 +146,6 @@ def main():
     parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
     parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
     parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
-    parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
     group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
