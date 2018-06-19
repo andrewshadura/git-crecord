@@ -173,6 +173,7 @@ class CursesChunkSelector(object):
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def downarrowevent(self):
         """
@@ -191,6 +192,7 @@ class CursesChunkSelector(object):
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def downarrowshiftevent(self):
         """
