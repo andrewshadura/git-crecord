@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 # stuff related specifically to patch manipulation / parsing
 from gettext import gettext as _
 
@@ -24,7 +26,7 @@ class linereader(object):
             l = self.buf[0]
             del self.buf[0]
             return l
-        return self.fp.readline()
+        return self.fp.readline().decode('UTF-8')
 
     def __iter__(self):
         while True:

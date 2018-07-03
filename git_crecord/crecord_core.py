@@ -145,7 +145,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
                     p = subprocess.Popen(["git", "apply", "--whitespace=nowarn"], stdin=subprocess.PIPE, close_fds=util.closefds)
-                    p.stdin.write(fp.read())
+                    p.stdin.write(fp.read().decode('UTF-8'))
                     p.stdin.close()
                     p.wait()
                 except Exception as err:
