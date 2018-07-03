@@ -1017,7 +1017,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         self.printitem(towin=False)
         self.updatescroll()
 
-    def toggleamend(self, opts):
+    def toggleamend(self):
         """Toggle the amend flag.
 
         When the amend flag is set, a commit will modify the most recently
@@ -1025,14 +1025,14 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         new changeset will be created (the normal commit behavior).
 
         """
-        if opts.get('amend') is False:
-            opts['amend'] = True
+        if self.opts.get('amend') is False:
+            self.opts['amend'] = True
             msg = ("Amend option is turned on -- committing the currently "
                    "selected changes will not create a new changeset, but "
                    "instead update the most recently committed changeset.\n\n"
                    "Press any key to continue.")
-        elif opts.get('amend') is True:
-            opts['amend'] = False
+        elif self.opts.get('amend') is True:
+            self.opts['amend'] = False
             msg = ("Amend option is turned off -- committing the currently "
                    "selected changes will create a new changeset.\n\n"
                    "Press any key to continue.")
@@ -1048,7 +1048,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
                 return False
         return True
 
-    def handlekeypressed(self, keypressed, opts):
+    def handlekeypressed(self, keypressed):
         """
         Perform actions based on pressed keys.
 
@@ -1071,20 +1071,20 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         elif keypressed in ["q"]:
             raise util.Abort(_('user quit'))
         elif keypressed in ['a']:
-            self.toggleamend(opts)
+            self.toggleamend()
         elif keypressed in ["c"]:
             if self.confirmcommit():
-                opts['commit'] = True
+                self.opts['commit'] = True
                 return True
         elif keypressed in ["s"]:
-            opts['commit'] = False
+            self.opts['commit'] = False
             if self.confirmcommit(stage=True):
-                opts['commit'] = False
+                self.opts['commit'] = False
                 return True
         elif keypressed in ["r"]:
             if self.confirmcommit(review=True):
-                opts['commit'] = True
-                opts['crecord_reviewpatch'] = True
+                self.opts['commit'] = True
+                self.opts['crecord_reviewpatch'] = True
                 return True
         elif keypressed in [' ']:
             self.toggleapply()
@@ -1115,6 +1115,8 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         # interface, it should be printed by the calling code
         self.initerr = None
         self.yscreensize, self.xscreensize = self.stdscr.getmaxyx()
+
+        self.opts = opts
 
         curses.start_color()
         curses.use_default_colors()
@@ -1150,11 +1152,11 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             self.currentselecteditem, recursechildren=False)
 
         # option which enables/disables patch-review (in editor) step
-        opts['crecord_reviewpatch'] = False
+        self.opts['crecord_reviewpatch'] = False
 
-        if opts['author'] is not None:
+        if self.opts['author'] is not None:
             # make it accessible by self.ui.username()
-            self.ui.setusername(opts['author'])
+            self.ui.setusername(self.opts['author'])
 
         while True:
             self.updatescreen()
@@ -1165,6 +1167,6 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
                     continue
             except curses.error:
                 keypressed = "FOOBAR"
-            if self.handlekeypressed(keypressed, opts):
+            if self.handlekeypressed(keypressed):
                 break
         signal.signal(signal.SIGWINCH, origsigwinchhandler)
