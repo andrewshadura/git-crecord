@@ -167,6 +167,7 @@ def main():
     args = parser.parse_args()
 
     opts = vars(args)
+    opts['operation'] = subcommand
 
     if subcommand == 'cstage':
         opts['index'] = True
