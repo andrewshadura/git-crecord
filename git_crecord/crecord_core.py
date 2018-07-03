@@ -93,7 +93,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         backupdir = os.path.join(repo.controldir(), 'record-backups')
         try:
             os.mkdir(backupdir)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
         index_backup = None
@@ -196,7 +196,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 os.rmdir(backupdir)
                 if index_backup:
                     index_backup.write()
-            except OSError, NameError:
+            except (OSError, NameError):
                 pass
 
     return recordfunc(ui, repo, "", None, opts)
