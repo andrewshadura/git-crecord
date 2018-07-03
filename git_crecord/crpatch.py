@@ -1,7 +1,7 @@
 # stuff related specifically to patch manipulation / parsing
 from gettext import gettext as _
 
-import cStringIO
+import io
 import re
 
 class PatchError(Exception):
@@ -261,7 +261,7 @@ class uiheader(patchnode):
             fp.write(h)
 
     def prettystr(self):
-        x = cStringIO.StringIO()
+        x = io.StringIO()
         self.pretty(x)
         return x.getvalue()
 
@@ -534,7 +534,7 @@ class uihunk(patchnode):
         return self.header.filename()
 
     def prettystr(self):
-        x = cStringIO.StringIO()
+        x = io.StringIO()
         self.pretty(x)
         return x.getvalue()
 

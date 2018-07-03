@@ -10,7 +10,7 @@
 '''text-gui based change selection during commit or qrefresh'''
 from gettext import gettext as _
 from . import util
-import cStringIO
+import io
 import errno
 import os
 import tempfile
@@ -114,7 +114,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 elif f in added:
                     newly_added_backups[f] = tmpname
 
-            fp = cStringIO.StringIO()
+            fp = io.StringIO()
             all_backups = {}
             all_backups.update(backups)
             all_backups.update(newly_added_backups)
