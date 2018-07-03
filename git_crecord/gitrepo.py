@@ -1,6 +1,6 @@
 import os
 import sys
-import util
+from . import util
 
 INDEX_FILENAME = "index"
 

@@ -17,8 +17,8 @@ import tempfile
 import textwrap
 import subprocess
 
-import crpatch
-import chunk_selector
+from . import crpatch
+from . import chunk_selector
 
 def dorecord(ui, repo, commitfunc, *pats, **opts):
     def recordfunc(ui, repo, message, match, opts):
