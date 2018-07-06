@@ -432,7 +432,7 @@ class CursesChunkSelector(object):
         width = self.xscreensize
         # turn tabs into spaces
         instr = instr.expandtabs(4)
-        strwidth = encoding.colwidth(instr)
+        strwidth = encoding.ucolwidth(instr)
         numspaces = (width - ((strwidth + xstart) % width) - 1)
         return instr + " " * numspaces + "\n"
 
@@ -550,7 +550,7 @@ class CursesChunkSelector(object):
             lines = []
             lastwidth = width
             for s in segments:
-                w = encoding.colwidth(s)
+                w = encoding.ucolwidth(s)
                 sep = ' ' * (1 + (s and s[0] not in '-['))
                 if lastwidth + w + len(sep) >= width:
                     lines.append(s)
