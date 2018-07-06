@@ -8,6 +8,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version
 
+from __future__ import unicode_literals
+
 from gettext import gettext as _
 import os
 import subprocess
@@ -103,7 +105,7 @@ def copyfile(src, dest, hardlink=False, copystat=False):
 
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
-    return encoding.trim(text, maxlength, ellipsis='...')
+    return encoding.trim(text.encode('UTF-8'), maxlength, ellipsis=b'...').decode('UTF-8')
 
 _notset = object()
 def safehasattr(thing, attr):
