@@ -209,7 +209,7 @@ def ucolwidth(d):
 def getcols(s, start, c):
     '''Use colwidth to find a c-column substring of s starting at byte
     index start'''
-    for x in xrange(start + c, len(s)):
+    for x in range(start + c, len(s)):
         t = s[start:x]
         if colwidth(t) == c:
             return t
@@ -301,7 +301,7 @@ def trim(s, width, ellipsis='', leftside=False):
     else:
         uslice = lambda i: u[:-i]
         concat = lambda s: s + ellipsis
-    for i in xrange(1, len(u)):
+    for i in range(1, len(u)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
             return concat(usub.encode(_sysstr(encoding)))
