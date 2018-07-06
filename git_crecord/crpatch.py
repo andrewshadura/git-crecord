@@ -537,11 +537,12 @@ def parsepatch(fp):
             self.header = None
             self.context = []
             self.before = []
-            self.changedlines = []
-            self.stream = []
+            self.hunk = []
+            self.headers = []
 
-        def _range(self, (fromstart, fromend, tostart, toend, proc)):
+        def addrange(self, limits):
             "Store range line info to associated instance variables."
+            fromstart, fromend, tostart, toend, proc = limits
             self.fromline = int(fromstart)
             self.toline = int(tostart)
             self.proc = proc
@@ -549,7 +550,7 @@ def parsepatch(fp):
         def add_new_hunk(self):
             """
             Create a new complete hunk object, adding it to the latest header
-            and to self.stream.
+            and to self.headers.
 
             Add all of the previously collected information about
             the hunk to the new hunk object.  This information includes
@@ -562,17 +563,17 @@ def parsepatch(fp):
 
             """
             h = uihunk(self.header, self.fromline, self.toline, self.proc,
-                       self.before, self.changedlines, self.context)
+                       self.before, self.hunk, self.context)
             self.header.hunks.append(h)
-            self.stream.append(h)
+            self.headers.append(h)
             self.fromline += len(self.before) + h.removed + len(self.context)
             self.toline += len(self.before) + h.added + len(self.context)
             self.before = []
-            self.changedlines = []
+            self.hunk = []
             self.context = []
             self.proc = ''
 
-        def _context(self, context):
+        def addcontext(self, context):
             """
             Set the value of self.context.
 
@@ -585,10 +586,10 @@ def parsepatch(fp):
             self.context = context
             # if there have been changed lines encountered that haven't yet
             # been add to a hunk.
-            if self.changedlines:
+            if self.hunk:
                 self.add_new_hunk()
 
-        def _changedlines(self, changedlines):
+        def _changedlines(self, hunk):
             """
             Store the changed lines in self.changedlines.
 
@@ -597,47 +598,47 @@ def parsepatch(fp):
             clear the context-line buffer.
 
             """
-            self.changedlines = changedlines
+            self.hunk = hunk
             self.before = self.context
             self.context = []
 
         def add_new_header(self, hdr):
             """
             Create a header object containing the header lines, and the
-            filename the header applies to.  Add the header to self.stream.
+            filename the header applies to.  Add the header to self.headers.
 
             """
             # if there are any lines in the unchanged-lines buffer, create a 
             # new hunk using them, and add it to the last header.
-            if self.changedlines:
+            if self.hunk:
                 self.add_new_hunk()
 
             # create a new header and add it to self.stream
             self.header = uiheader(hdr)
             fileName = self.header.filename()
 
-            self.stream.append(self.header)
+            self.headers.append(self.header)
 
         def finished(self):
             # if there are any lines in the unchanged-lines buffer, create a 
             # new hunk using them, and add it to the last header.
-            if self.changedlines:
+            if self.hunk:
                 self.add_new_hunk()
 
-            return self.stream
+            return self.headers
 
         transitions = {
-            'file': {'context': _context,
+            'file': {'context': addcontext,
                      'file': add_new_header,
                      'hunk': _changedlines,
-                     'range': _range},
+                     'range': addrange},
             'context': {'file': add_new_header,
                         'hunk': _changedlines,
-                        'range': _range},
-            'hunk': {'context': _context,
+                        'range': addrange},
+            'hunk': {'context': addcontext,
                      'file': add_new_header,
-                     'range': _range},
-            'range': {'context': _context,
+                     'range': addrange},
+            'range': {'context': addcontext,
                       'hunk': _changedlines},
             }
 
