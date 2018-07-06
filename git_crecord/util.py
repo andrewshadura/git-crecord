@@ -59,7 +59,7 @@ def systemcall(cmd, onerr=None, errprefix=None):
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, close_fds=closefds)
     out = ''
-    for line in iter(p.stdout.readline, ''):
+    for line in iter(p.stdout.readline, b''):
         out = out + line.decode(sys.stdout.encoding)
     p.wait()
     rc = p.returncode
