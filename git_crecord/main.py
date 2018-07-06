@@ -117,7 +117,7 @@ class Ui:
             if opts['cleanup'] is None:
                 opts['cleanup'] = 'strip'
 
-            for k, v in opts.iteritems():
+            for k, v in opts.items():
                 if k in ('author', 'date', 'amend', 'signoff', 'cleanup'):
                     if v is None:
                         continue

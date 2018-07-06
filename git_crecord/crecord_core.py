@@ -185,11 +185,11 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         finally:
             # 5. finally restore backed-up files
             try:
-                for realname, tmpname in backups.iteritems():
+                for realname, tmpname in backups.items():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
                     util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
-                for realname, tmpname in newly_added_backups.iteritems():
+                for realname, tmpname in newly_added_backups.items():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
                     util.copyfile(tmpname, os.path.join(repo.path, realname))
                     os.unlink(tmpname)
