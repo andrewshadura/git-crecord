@@ -589,7 +589,7 @@ def parsepatch(fp):
             if self.hunk:
                 self.add_new_hunk()
 
-        def _changedlines(self, hunk):
+        def addhunk(self, hunk):
             """
             Store the changed lines in self.changedlines.
 
@@ -602,7 +602,7 @@ def parsepatch(fp):
             self.before = self.context
             self.context = []
 
-        def add_new_header(self, hdr):
+        def newfile(self, hdr):
             """
             Create a header object containing the header lines, and the
             filename the header applies to.  Add the header to self.headers.
@@ -613,11 +613,10 @@ def parsepatch(fp):
             if self.hunk:
                 self.add_new_hunk()
 
-            # create a new header and add it to self.stream
-            self.header = uiheader(hdr)
-            fileName = self.header.filename()
-
-            self.headers.append(self.header)
+            # create a new header and add it to self.header
+            h = uiheader(hdr)
+            self.headers.append(h)
+            self.header = h
 
         def finished(self):
             # if there are any lines in the unchanged-lines buffer, create a 
@@ -629,17 +628,17 @@ def parsepatch(fp):
 
         transitions = {
             'file': {'context': addcontext,
-                     'file': add_new_header,
-                     'hunk': _changedlines,
+                     'file': newfile,
+                     'hunk': addhunk,
                      'range': addrange},
-            'context': {'file': add_new_header,
-                        'hunk': _changedlines,
+            'context': {'file': newfile,
+                        'hunk': addhunk,
                         'range': addrange},
             'hunk': {'context': addcontext,
-                     'file': add_new_header,
+                     'file': newfile,
                      'range': addrange},
             'range': {'context': addcontext,
-                      'hunk': _changedlines},
+                      'hunk': addhunk},
             }
 
     p = parser()
