@@ -62,7 +62,7 @@ def systemcall(cmd, onerr=None, errprefix=None):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, close_fds=closefds)
     out = ''
     for line in iter(p.stdout.readline, b''):
-        out = out + line.decode(sys.stdout.encoding)
+        out = out + line.decode(encoding.encoding)
     p.wait()
     rc = p.returncode
 
@@ -105,7 +105,7 @@ def copyfile(src, dest, hardlink=False, copystat=False):
 
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
-    return encoding.trim(text.encode('UTF-8'), maxlength, ellipsis=b'...').decode('UTF-8')
+    return encoding.trim(text.encode(encoding.encoding), maxlength, ellipsis=b'...').decode(encoding.encoding)
 
 _notset = object()
 def safehasattr(thing, attr):
