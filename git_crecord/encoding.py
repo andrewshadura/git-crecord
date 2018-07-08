@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import unicode_literals, absolute_import, print_function
 
 import array
 import locale
@@ -13,10 +13,8 @@ import os
 import unicodedata
 import sys
 
-def pycompat():
-    pass
-
-pycompat.ispy3 = (sys.version_info[0] >= 3)
+class pycompat:
+    ispy3 = (sys.version_info[0] >= 3)
 
 if pycompat.ispy3:
     import builtins
@@ -31,7 +29,7 @@ if pycompat.ispy3:
         """
         if isinstance(s, builtins.str):
             return s
-        return s.decode(u'latin-1')
+        return s.decode('latin-1')
 else:
     def _sysstr(s):
         return s
@@ -49,7 +47,7 @@ elif _nativeenviron:
 else:
     # preferred encoding isn't known yet; use utf-8 to avoid unicode error
     # and recreate it once encoding is settled
-    environ = dict((k.encode(u'utf-8'), v.encode(u'utf-8'))
+    environ = dict((k.encode('utf-8'), v.encode('utf-8'))
                    for k, v in os.environ.items())
 
 def _getpreferredencoding():
@@ -93,7 +91,7 @@ fallbackencoding = 'ISO-8859-1'
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
     # dict to be exported to other modules
-    environ = dict((tolocal(k.encode(u'utf-8')), tolocal(v.encode(u'utf-8')))
+    environ = dict((tolocal(k.encode('utf-8')), tolocal(v.encode('utf-8')))
                    for k, v in os.environ.items())
 
 # How to treat ambiguous-width characters. Set to 'WFA' to treat as wide.
@@ -139,7 +137,7 @@ def trim(s, width, ellipsis=b'', leftside=False):
     b'+++'
     >>> print(trim(t, 1, ellipsis=ellipsis))
     b'+'
-    >>> u = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
+    >>> u = '\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
     >>> t = u.encode('UTF-8')
     >>> print(trim(t, 12, ellipsis=ellipsis))
     b'\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a'

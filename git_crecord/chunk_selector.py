@@ -17,7 +17,7 @@ import signal
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
 import locale
-locale.setlocale(locale.LC_ALL, u'')
+locale.setlocale(locale.LC_ALL, '')
 
 from .crpatch import patch, uiheader, uihunk, uihunkline
 
