@@ -49,7 +49,8 @@ class build_py_new(build_py_org):
     def run(self):
         build_py_org.run(self)
         if not self.dry_run:
-            map(lambda x: generate_manpage(*x), map(lambda x: (x, man_name(x)), glob(__manpages__)))
+            for page in glob(__manpages__):
+                generate_manpage(page, man_name(page))
 build_py.build_py = build_py_new
 
 __name__ = "git-crecord"
