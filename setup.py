@@ -32,7 +32,7 @@ def man_path(fname):
     return os.path.join('share', 'man', 'man' + category), [fname]
 
 def man_files(pattern):
-    return map(man_path, map(man_name, glob(pattern)))
+    return list(map(man_path, map(man_name, glob(pattern))))
 
 # monkey patch setuptools to use distutils owner/group functionality
 from setuptools.command import sdist
