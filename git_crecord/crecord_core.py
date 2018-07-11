@@ -15,7 +15,6 @@ import io
 import errno
 import os
 import tempfile
-import textwrap
 import subprocess
 
 from . import crpatch
@@ -156,21 +155,6 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     else:
                         raise util.Abort(_('patch failed to apply'))
             del fp
-
-            # 3c. prepare the commit message template
-            opts['template'] = textwrap.dedent("""
-            
-            # Please enter the commit message for your changes. Lines starting
-            # with '#' will be ignored, and an empty message aborts the commit.
-            # On branch master
-            #
-            # Changes to be committed:
-            #%s
-            #""" % "".join("""
-            #\tmodified:   """ + f for f in newfiles))
-
-            if (opts['message'] is None) and (opts['amend']):
-                opts['template'] = util.systemcall(['git', 'show', '--pretty=tformat:%B', '--no-patch']) + opts['template']
 
             # 4. We prepared working directory according to filtered patch.
             #    Now is the time to delegate the job to commit/qrefresh or the like!

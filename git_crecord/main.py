@@ -111,7 +111,6 @@ class Ui:
             f = os.fdopen(fd, "w")
             if opts['message'] is not None:
                 f.write(opts['message'])
-            f.write(opts['template'])
             f.close()
 
             if opts['cleanup'] is None:
@@ -130,10 +129,10 @@ class Ui:
             util.system(['git', 'add', '-N', '--'] + list(files),
                        onerr=util.Abort, errprefix=_("add failed"))
             if opts['message'] is None:
-                util.system(['git', 'commit', '--no-status', '-t', name] + args + ['--'] + list(files),
+                util.system(['git', 'commit'] + args + ['--'] + list(files),
                            onerr=util.Abort, errprefix=_("commit failed"))
             else:
-                util.system(['git', 'commit', '--no-status', '-F', name] + args + ['--'] + list(files),
+                util.system(['git', 'commit', '-F', name] + args + ['--'] + list(files),
                            onerr=util.Abort, errprefix=_("commit failed"))
 
         finally:
