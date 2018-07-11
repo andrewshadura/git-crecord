@@ -105,7 +105,7 @@ def copyfile(src, dest, hardlink=False, copystat=False):
 
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
-    return encoding.trim(text.encode(encoding.encoding), maxlength, ellipsis=b'...').decode(encoding.encoding)
+    return encoding.trim(text, maxlength, ellipsis='...')
 
 _notset = object()
 def safehasattr(thing, attr):

@@ -112,63 +112,50 @@ def getcols(s, start, c):
         if colwidth(t) == c:
             return t
 
-def trim(s, width, ellipsis=b'', leftside=False):
+def trim(s, width, ellipsis='', leftside=False):
     """Trim string 's' to at most 'width' columns (including 'ellipsis').
 
     If 'leftside' is True, left side of string 's' is trimmed.
     'ellipsis' is always placed at trimmed side.
 
-    >>> ellipsis = b'+++'
+    >>> ellipsis = '+++'
     >>> encoding = 'utf-8'
-    >>> t = b'1234567890'
+    >>> t = '1234567890'
     >>> print(trim(t, 12, ellipsis=ellipsis))
-    b'1234567890'
+    1234567890
     >>> print(trim(t, 10, ellipsis=ellipsis))
-    b'1234567890'
+    1234567890
     >>> print(trim(t, 8, ellipsis=ellipsis))
-    b'12345+++'
+    12345+++
     >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
-    b'+++67890'
+    +++67890
     >>> print(trim(t, 8))
-    b'12345678'
+    12345678
     >>> print(trim(t, 8, leftside=True))
-    b'34567890'
+    34567890
     >>> print(trim(t, 3, ellipsis=ellipsis))
-    b'+++'
+    +++
     >>> print(trim(t, 1, ellipsis=ellipsis))
-    b'+'
-    >>> u = '\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
-    >>> t = u.encode('UTF-8')
+    +
+    >>> t = '\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
     >>> print(trim(t, 12, ellipsis=ellipsis))
-    b'\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a'
+    \u3042\u3044\u3046\u3048\u304a
     >>> print(trim(t, 10, ellipsis=ellipsis))
-    b'\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a'
+    \u3042\u3044\u3046\u3048\u304a
     >>> print(trim(t, 8, ellipsis=ellipsis))
-    b'\xe3\x81\x82\xe3\x81\x84+++'
+    \u3042\u3044+++
     >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
-    b'+++\xe3\x81\x88\xe3\x81\x8a'
+    +++\u3048\u304a
     >>> print(trim(t, 5))
-    b'\xe3\x81\x82\xe3\x81\x84'
+    \u3042\u3044
     >>> print(trim(t, 5, leftside=True))
-    b'\xe3\x81\x88\xe3\x81\x8a'
+    \u3048\u304a
     >>> print(trim(t, 4, ellipsis=ellipsis))
-    b'+++'
+    +++
     >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
-    b'+++'
+    +++
     """
-    try:
-        u = s.decode(_sysstr(encoding))
-    except UnicodeDecodeError:
-        if len(s) <= width: # trimming is not needed
-            return s
-        width -= len(ellipsis)
-        if width <= 0: # no enough room even for ellipsis
-            return ellipsis[:width + len(ellipsis)]
-        if leftside:
-            return ellipsis + s[-width:]
-        return s[:width] + ellipsis
-
-    if ucolwidth(u) <= width: # trimming is not needed
+    if ucolwidth(s) <= width: # trimming is not needed
         return s
 
     width -= len(ellipsis)
@@ -176,14 +163,14 @@ def trim(s, width, ellipsis=b'', leftside=False):
         return ellipsis[:width + len(ellipsis)]
 
     if leftside:
-        uslice = lambda i: u[i:]
+        uslice = lambda i: s[i:]
         concat = lambda s: ellipsis + s
     else:
-        uslice = lambda i: u[:-i]
+        uslice = lambda i: s[:-i]
         concat = lambda s: s + ellipsis
-    for i in range(1, len(u)):
+    for i in range(1, len(s)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
-            return concat(usub.encode(_sysstr(encoding)))
+            return concat(usub)
     return ellipsis # no enough room for multi-column characters
 
