@@ -2,6 +2,7 @@
 
 import os
 import fnmatch
+from distutils import log
 from setuptools import setup, find_packages
 
 def read(fname):
@@ -12,6 +13,7 @@ def glob(fname):
 
 def generate_manpage(src, dst):
     import docutils.core
+    log.info("generating a manpage from %s to %s", src, dst)
     docutils.core.publish_file(source_path=src, destination_path=dst, writer_name='manpage')
 
 def man_name(fname):
