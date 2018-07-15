@@ -511,6 +511,23 @@ class uihunk(patchnode):
 
         fp.write(''.join(self.before + hunklinelist + self.after))
 
+    def reversehunks(self):
+       m = {'+': '-', '-': '+', '\\': '\\'}
+       hunk = ['%s%s' % (m[l.prettystr()[0:1]], l.prettystr()[1:]) for l in self.changedlines if l.applied]
+       return uihunk(self.header, self.fromline, self.toline, self.proc, self.before, hunk, self.after)
+
+    def unapplyhunks(self):
+        m = {'+': '-', '-': '+', '\\': '\\'}
+        hunklinelist = []
+        for changedline in self.changedlines:
+           changedlinestr = changedline.prettystr()
+           if not changedline.applied:
+               hunklinelist.append('%s%s' % (m[changedlinestr[0]], changedlinestr[1:]))
+           elif changedlinestr[0] == "+":
+               hunklinelist.append(" " + changedlinestr[1:])
+        return uihunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklinelist, self.after)
+
+
     pretty = write
 
     def filename(self):
