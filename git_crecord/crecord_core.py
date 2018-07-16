@@ -35,7 +35,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         left in place, so the user can continue his work.
         """
 
-        git_args = ["git", "diff", "--binary"]
+        git_args = ["git", "-c", "diff.mnemonicprefix=false", "diff", "--binary"]
         git_base = []
 
         if opts['cached']:
