@@ -76,6 +76,14 @@ def chunkselector(opts, headerlist, ui):
 
 _headermessages = { # {operation: text}
     'crecord': _('Select hunks to commit'),
+    'cstage': _('Select hunks to stage'),
+    'cunstage': _('Select hunks to keep'),
+}
+
+_confirmmessages = {
+    'crecord': _('Are you sure you want to commit the selected changes [yN]?'),
+    'cstage': _('Are you sure you want to stage the selected changes [yN]?'),
+    'cunstage': _('Are you sure you want to unstage the unselected changes [yN]?'),
 }
 
 class CursesChunkSelector(object):
@@ -981,7 +989,7 @@ The following are valid keystrokes:
 
         return response
 
-    def confirmcommit(self, review=False, stage=False):
+    def confirmcommit(self, review=False):
         """Ask for 'Y' to be pressed to confirm selected. Return True if
         confirmed."""
         if review:
@@ -996,12 +1004,8 @@ NOTE: don't add/remove lines unless you also modify the range information.
 
 Are you sure you want to review/edit and confirm the selected changes [yN]?
 """)
-        elif stage:
-            confirmtext = (
-                "Are you sure you want to stage the selected changes [yN]? ")
         else:
-            confirmtext = (
-                "Are you sure you want to commit the selected changes [yN]? ")
+            confirmtext = _confirmmessages[self.opts['operation']]
 
         response = self.confirmationwindow(confirmtext)
         if response is None:
@@ -1082,7 +1086,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
                 return True
         elif keypressed in ["s"]:
             self.opts['commit'] = False
-            if self.confirmcommit(stage=True):
+            if self.confirmcommit():
                 self.opts['commit'] = False
                 return True
         elif keypressed in ["r"]:
