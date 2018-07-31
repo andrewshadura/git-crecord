@@ -1182,4 +1182,3 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
                 keypressed = "FOOBAR"
             if self.handlekeypressed(keypressed):
                 break
-        signal.signal(signal.SIGWINCH, origsigwinchhandler)
