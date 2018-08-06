@@ -96,6 +96,10 @@ class Ui:
 
         return t
 
+    def stage(self, *files, **opts):
+        util.system(['git', 'add', '-f', '--'] + list(files),
+                   onerr=util.Abort, errprefix=_("add failed"))
+
     def commit(self, *files, **opts):
         (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
                                       suffix=".txt", text=True)

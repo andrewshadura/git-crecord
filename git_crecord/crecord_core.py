@@ -162,7 +162,10 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
             # it is important to first chdir to repo root -- we'll call a
             # highlevel command with list of pathnames relative to repo root
             newfiles = [os.path.join(repo.path, n) for n in newfiles]
-            ui.commit(*newfiles, **opts)
+            if opts['operation'] == 'crecord':
+                ui.commit(*newfiles, **opts)
+            else:
+                ui.stage(*newfiles, **opts)
             ui.debug('previous staging contents backed up as tree %r\n' % index_backup.backup_tree())
             index_backup = None
 
