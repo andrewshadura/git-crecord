@@ -65,7 +65,7 @@ def scanpatch(fp):
             else:
                 lr.push(fromfile)
             yield 'file', header
-        elif line[0] == ' ':
+        elif line.startswith(' '):
             yield 'context', scanwhile(line, lambda l: l[0] in ' \\')
         elif line[0] in '-+':
             yield 'hunk', scanwhile(line, lambda l: l[0] in '-+\\')
@@ -460,9 +460,9 @@ class uihunk(patchnode):
     def countchanges(self):
         """changedlines -> (n+,n-)"""
         add = len([l for l in self.changedlines if l.applied
-                   and l.prettystr()[0] == '+'])
+                   and l.prettystr().startswith('+')])
         rem = len([l for l in self.changedlines if l.applied
-                   and l.prettystr()[0] == '-'])
+                   and l.prettystr().startswith('-')])
         return add, rem
 
     def getfromtoline(self):
@@ -506,7 +506,7 @@ class uihunk(patchnode):
             changedlinestr = changedline.prettystr()
             if changedline.applied:
                 hunklinelist.append(changedlinestr)
-            elif changedlinestr[0] == "-":
+            elif changedlinestr.startswith("-"):
                 hunklinelist.append(" " + changedlinestr[1:])
 
         fp.write(''.join(self.before + hunklinelist + self.after))
@@ -523,7 +523,7 @@ class uihunk(patchnode):
            changedlinestr = changedline.prettystr()
            if not changedline.applied:
                hunklinelist.append('%s%s' % (m[changedlinestr[0]], changedlinestr[1:]))
-           elif changedlinestr[0] == "+":
+           elif changedlinestr.startswith("+"):
                hunklinelist.append(" " + changedlinestr[1:])
         return uihunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklinelist, self.after)
 
