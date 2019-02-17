@@ -41,7 +41,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         if opts['cached']:
             git_args.append("--cached")
 
-        if not opts['index']:
+        if not opts['index'] and repo.head():
             git_base.append("HEAD")
 
         p = subprocess.Popen(git_args + git_base, stdout=subprocess.PIPE, close_fds=util.closefds)

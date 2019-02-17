@@ -58,3 +58,6 @@ class GitRepo(object):
 
     def open_index(self):
         return GitIndex(self.index_path())
+
+    def head(self):
+        return util.systemcall(['git', 'rev-parse', '--verify', '-q', 'HEAD']).rstrip('\n')
