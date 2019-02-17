@@ -97,8 +97,10 @@ class Ui:
         return t
 
     def stage(self, *files, **opts):
-        util.system(['git', 'add', '-f', '--'] + list(files),
-                   onerr=util.Abort, errprefix=_("add failed"))
+        to_add = [f for f in files if os.path.exists(f)]
+        if to_add:
+            util.system(['git', 'add', '-N', '--'] + to_add,
+                       onerr=util.Abort, errprefix=_("add failed"))
 
     def commit(self, *files, **opts):
         (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
@@ -130,8 +132,11 @@ class Ui:
                     else:
                         args.append('--%s=%s' % (k, v))
 
-            util.system(['git', 'add', '-N', '--'] + list(files),
-                       onerr=util.Abort, errprefix=_("add failed"))
+            util.system(['git', 'status'])
+            to_add = [f for f in files if os.path.exists(f)]
+            if to_add:
+                util.system(['git', 'add', '-N', '--'] + to_add,
+                           onerr=util.Abort, errprefix=_("add failed"))
             if opts['message'] is None:
                 util.system(['git', 'commit'] + args + ['--'] + list(files),
                            onerr=util.Abort, errprefix=_("commit failed"))
