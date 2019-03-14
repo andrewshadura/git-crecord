@@ -67,6 +67,15 @@ def chunkselector(opts, headerlist, ui):
 
     """
     chunkselector = CursesChunkSelector(headerlist, ui)
+
+    class dummystdscr(object):
+        def clear(self):
+            pass
+        def refresh(self):
+            pass
+
+    chunkselector.stdscr = dummystdscr()
+
     f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main, opts)
     if chunkselector.initerr is not None:
