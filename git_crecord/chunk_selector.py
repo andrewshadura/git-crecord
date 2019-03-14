@@ -1159,8 +1159,11 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
             self.stdscr.clear()
             self.stdscr.refresh()
         elif curses.unctrl(keypressed) in [b"^L"]:
-            # scroll the current line to the top of the screen
+            # scroll the current line to the top of the screen, and redraw
+            # everything
             self.scrolllines(self.selecteditemstartline)
+            self.stdscr.clear()
+            self.stdscr.refresh()
         elif keypressed in ["g", "KEY_HOME"]:
             self.handlefirstlineevent()
         elif keypressed in ["G", "KEY_END"]:
