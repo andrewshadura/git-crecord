@@ -491,8 +491,8 @@ class CursesChunkSelector(object):
         # turn tabs into spaces
         instr = instr.expandtabs(4)
         strwidth = encoding.ucolwidth(instr)
-        numspaces = (width - ((strwidth + xstart) % width) - 1)
-        return instr + " " * numspaces + "\n"
+        numspaces = width - ((strwidth + xstart) % width)
+        return instr + " " * numspaces
 
     def printstring(self, window, text, fgcolor=None, bgcolor=None, pair=None,
         pairname=None, attrlist=None, towin=True, align=True, showwhtspc=False):
@@ -1214,6 +1214,12 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         # we won't clear it if the scroll region is small enough to comfortably
         # fit on the terminal.
         self.stdscr.clear()
+
+        # don't display the cursor
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
 
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
