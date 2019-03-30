@@ -1103,7 +1103,7 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         elif keypressed in ["f"]:
             self.togglefolded()
         elif keypressed in ["F"]:
-            self.togglefolded(foldParent=True)
+            self.togglefolded(foldparent=True)
         elif keypressed in ["?"]:
             self.helpwindow()
             self.stdscr.clear()
