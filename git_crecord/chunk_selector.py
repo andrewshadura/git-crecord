@@ -137,6 +137,45 @@ class CursesChunkSelector(object):
         # if the last 'toggle all' command caused all changes to be applied
         self.waslasttoggleallapplied = True
 
+    def handlefirstlineevent(self):
+        """
+        Handle 'g' to navigate to the top most file in the ncurses window.
+        """
+        self.currentselecteditem = self.headerlist[0]
+        currentitem = self.currentselecteditem
+        # select the parent item recursively until we're at a header
+        while True:
+            nextitem = currentitem.parentitem()
+            if nextitem is None:
+                break
+            else:
+                currentitem = nextitem
+
+        self.currentselecteditem = currentitem
+
+    def handlelastlineevent(self):
+        """
+        Handle 'G' to navigate to the bottom most file/hunk/line depending
+        on the whether the fold is active or not.
+
+        If the bottom most file is folded, it navigates to that file and stops there.
+        If the bottom most file is unfolded, it navigates to the bottom most hunk in
+        that file and stops there. If the bottom most hunk is unfolded, it navigates to
+        the bottom most line in that hunk.
+        """
+        currentitem = self.currentselecteditem
+        nextitem = currentitem.nextitem()
+        # select the child item recursively until we're at a footer
+        while nextitem is not None:
+            nextitem = currentitem.nextitem()
+            if nextitem is None:
+                break
+            else:
+                currentitem = nextitem
+
+        self.currentselecteditem = currentitem
+        self.recenterdisplayedarea()
+
     def uparrowevent(self):
         """
         Try to select the previous item to the current item that has the
@@ -933,6 +972,8 @@ The following are valid keystrokes:
         PgUp/PgDn [K/J] : go to previous/next item of same type
  Right/Left-arrow [l/h] : go to child item / parent item
  Shift-Left-arrow   [H] : go to parent header / fold selected header
+                      g : go to the top
+                      G : go to the bottom
                       f : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                  ctrl-l : scroll the selected line to the top of the screen
@@ -1111,6 +1152,10 @@ Are you sure you want to review/edit and confirm the selected changes [yN]?
         elif curses.unctrl(keypressed) in [b"^L"]:
             # scroll the current line to the top of the screen
             self.scrolllines(self.selecteditemstartline)
+        elif keypressed in ["g", "KEY_HOME"]:
+            self.handlefirstlineevent()
+        elif keypressed in ["G", "KEY_END"]:
+            self.handlelastlineevent()
         return False
 
     def main(self, stdscr, opts):
