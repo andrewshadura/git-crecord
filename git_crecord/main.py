@@ -132,7 +132,6 @@ class Ui:
                     else:
                         args.append('--%s=%s' % (k, v))
 
-            util.system(['git', 'status'])
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:
                 util.system(['git', 'add', '-N', '--'] + to_add,
