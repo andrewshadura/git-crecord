@@ -1007,8 +1007,9 @@ The following are valid keystrokes:
         helplines = helplines + [" "]*(
             self.yscreensize - self.numstatuslines - len(helplines) - 1)
         try:
-            for line in helplines:
-                self.printstring(helpwin, line, pairname="legend")
+            self.printstring(helpwin, helplines[0], pairname="legend")
+            for line in helplines[1:]:
+                self.printstring(helpwin, line, pairname="normal")
         except curses.error:
             pass
         helpwin.refresh()
