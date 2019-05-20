@@ -688,7 +688,7 @@ def filterpatch(opts, chunks, chunkselector, ui):
     appliedHunkList = []
     for hdr in headers:
         if (hdr.applied and
-            (hdr.special() or len([h for h in hdr.hunks if h.applied]) > 0)):
+            (hdr.special() or hdr.binary() or len([h for h in hdr.hunks if h.applied]) > 0)):
             appliedHunkList.append(hdr)
             fixoffset = 0
             for hnk in hdr.hunks:
