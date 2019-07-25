@@ -14,11 +14,6 @@ import struct
 import termios
 import signal
 
-# This is required for ncurses to display non-ASCII characters in default user
-# locale encoding correctly.  --immerrr
-import locale
-locale.setlocale(locale.LC_ALL, '')
-
 from .crpatch import patch, uiheader, uihunk, uihunkline
 
 try:
@@ -67,6 +62,10 @@ def chunkselector(opts, headerlist, ui):
 
     """
     chunkselector = CursesChunkSelector(headerlist, ui)
+    # This is required for ncurses to display non-ASCII characters in default user
+    # locale encoding correctly.  --immerrr
+    import locale
+    locale.setlocale(locale.LC_ALL, '')
 
     class dummystdscr(object):
         def clear(self):
