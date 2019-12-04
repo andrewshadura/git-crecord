@@ -128,9 +128,9 @@ class Ui:
                         continue
                     if isinstance(v, bool):
                         if v is True:
-                            args.append('--%s' % k)
+                            args.append('--%s' % k.replace('_', '-'))
                     else:
-                        args.append('--%s=%s' % (k, v))
+                        args.append('--%s=%s' % (k.replace('_', '-'), v))
 
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:
