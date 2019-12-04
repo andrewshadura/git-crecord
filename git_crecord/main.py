@@ -123,7 +123,9 @@ class Ui:
                 opts['cleanup'] = 'strip'
 
             for k, v in opts.items():
-                if k in ('author', 'date', 'amend', 'signoff', 'cleanup'):
+                if k in ('author', 'date', 'amend', 'signoff', 'cleanup',
+                         'reset_author', 'gpg_sign', 'no_gpg_sign',
+                         'reedit_message', 'reuse_message'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -163,8 +165,13 @@ def main():
     parser.add_argument('--author', default=None, help='override author for commit')
     parser.add_argument('--date', default=None, help='override date for commit')
     parser.add_argument('-m', '--message', default=None, help='commit message')
+    parser.add_argument('-c', '--reedit-message', metavar='COMMIT', default=None, help='reuse and edit message from specified commit')
+    parser.add_argument('-C', '--reuse-message', metavar='COMMIT', default=None, help='reuse message from specified commit')
+    parser.add_argument('--reset-author', action='store_true', default=False, help='the commit is authored by me now (used with -C/-c/--amend)')
     parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
     parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
+    parser.add_argument('-S', '--gpg-sign', metavar='KEY-ID', nargs='?', const=True, default=None, help='GPG sign commit')
+    parser.add_argument('--no-gpg-sign', action='store_true', default=False, help=argparse.SUPPRESS)
     parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
     parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
     parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
