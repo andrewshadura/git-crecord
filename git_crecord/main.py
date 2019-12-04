@@ -99,7 +99,7 @@ class Ui:
     def stage(self, *files, **opts):
         to_add = [f for f in files if os.path.exists(f)]
         if to_add:
-            util.system(['git', 'add', '-N', '--'] + to_add,
+            util.system(['git', 'add', '-f', '-N', '--'] + to_add,
                        onerr=util.Abort, errprefix=_("add failed"))
 
     def commit(self, *files, **opts):
@@ -134,7 +134,7 @@ class Ui:
 
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:
-                util.system(['git', 'add', '-N', '--'] + to_add,
+                util.system(['git', 'add', '-f', '-N', '--'] + to_add,
                            onerr=util.Abort, errprefix=_("add failed"))
             if opts['message'] is None:
                 util.system(['git', 'commit'] + args + ['--'] + list(files),
