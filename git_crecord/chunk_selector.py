@@ -203,6 +203,7 @@ class CursesChunkSelector(object):
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def uparrowshiftevent(self):
         """
@@ -262,6 +263,7 @@ class CursesChunkSelector(object):
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def rightarrowevent(self):
         """
@@ -280,6 +282,7 @@ class CursesChunkSelector(object):
             nextitem = currentitem
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def leftarrowevent(self):
         """
@@ -306,6 +309,7 @@ class CursesChunkSelector(object):
                 self.togglefolded(item=nextitem)
 
         self.currentselecteditem = nextitem
+        self.recenterdisplayedarea()
 
     def leftarrowshiftevent(self):
         """
@@ -329,6 +333,7 @@ class CursesChunkSelector(object):
                 currentitem = nextitem
 
         self.currentselecteditem = currentitem
+        self.recenterdisplayedarea()
 
     def updatescroll(self):
         "Scroll the screen to fully show the currently-selected"
