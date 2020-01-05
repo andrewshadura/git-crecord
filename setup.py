@@ -60,7 +60,7 @@ __name__ = "git-crecord"
 setup(
     name = __name__,
     version = "20161226.0",
-    author = 'Andrew Shadura',
+    author = 'Andrej Shadura',
     author_email = 'andrew@shadura.me',
     url = 'https://github.com/andrewshadura/git-crecord',
     description = 'interactively select chunks to commit with Git',

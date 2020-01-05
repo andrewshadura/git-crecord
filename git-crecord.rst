@@ -6,7 +6,7 @@ git-crecord
 interactively select changes to commit or stage
 -----------------------------------------------
 
-:Author: Andrew Shadura <andrew@shadura.me>
+:Author: Andrej Shadura <andrew@shadura.me>
 :Date:   2016-12-25
 :Version: 0.1
 :Manual section: 1
