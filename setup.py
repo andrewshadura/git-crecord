@@ -67,6 +67,7 @@ setup(
     long_description = read('README.rst'),
     license = 'GPL-2+',
     packages = find_packages(),
+    python_requires = '~=3.6',
     setup_requires = ['docutils>=0.12'],
     classifiers = [
         'Development Status :: 4 - Beta',
