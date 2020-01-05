@@ -77,5 +77,3 @@ Authors
 -------
 
 For the list of contributors, see CONTRIBUTORS.
-
-.. include:: CONTRIBUTORS
