@@ -132,7 +132,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 fp.seek(0)
 
             # 3a. apply filtered patch to clean repo  (clean)
-            if backups:
+            if backups or any((f in contenders for f in removed)):
                 util.system(['git', 'checkout', '-f'] + git_base + ['--'] + [f for f in newfiles if f not in added],
                        onerr=util.Abort, errprefix=_("checkout failed"))
             # remove newly added files from 'clean' repo (so patch can apply)
