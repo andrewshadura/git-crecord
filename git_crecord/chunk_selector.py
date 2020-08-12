@@ -89,9 +89,9 @@ _headermessages = { # {operation: text}
 }
 
 _confirmmessages = {
-    'crecord': _('Are you sure you want to commit the selected changes [yN]?'),
-    'cstage': _('Are you sure you want to stage the selected changes [yN]?'),
-    'cunstage': _('Are you sure you want to unstage the unselected changes [yN]?'),
+    'crecord': _('Are you sure you want to commit the selected changes [Yn]?'),
+    'cstage': _('Are you sure you want to stage the selected changes [Yn]?'),
+    'cunstage': _('Are you sure you want to unstage the unselected changes [Yn]?'),
 }
 
 class CursesChunkSelector(object):
@@ -1039,17 +1039,15 @@ The following are valid keystrokes:
     def confirmationwindow(self, windowtext):
         "Display an informational window, then wait for and return a keypress."
 
-        confirmwin = curses.newwin(self.yscreensize, 0, 0, 0)
+        lines = windowtext.split("\n")
+        confirmwin = curses.newwin(len(lines), 0, 0, 0)
         try:
-            lines = windowtext.split("\n")
             for line in lines:
                 self.printstring(confirmwin, line, pairname="selected")
         except curses.error:
             pass
-        self.stdscr.refresh()
-        confirmwin.refresh()
         try:
-            response = chr(self.stdscr.getch())
+            response = chr(confirmwin.getch())
         except ValueError:
             response = None
 
@@ -1068,14 +1066,15 @@ close the editor without saving to accept the current patch as-is.
 NOTE: don't add/remove lines unless you also modify the range information.
       Failing to follow this rule will result in the commit aborting.
 
-Are you sure you want to review/edit and confirm the selected changes [yN]?
+Are you sure you want to review/edit and confirm the selected changes [Yn]?
 """)
         else:
             confirmtext = _confirmmessages[self.opts['operation']]
 
         response = self.confirmationwindow(confirmtext)
-        if response is None:
-            response = "n"
+
+        if response is None or len(response) == 0 or response == "\n":
+            response = "y"
         if response.lower().startswith("y"):
             return True
         else:
