@@ -200,5 +200,9 @@ def main():
     try:
         crecord_core.dorecord(ui, repo, None, **(opts))
     except util.Abort as inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
-        sys.exit(1)
+        sinst = str(inst)
+        if opts['quiet'] and 'commit failed' in sinst:
+            sys.exit(5)
+        else:
+            sys.stderr.write(_("abort: %s\n") % sinst)
+            sys.exit(1)
