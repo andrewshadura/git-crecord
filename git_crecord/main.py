@@ -125,7 +125,7 @@ class Ui:
             for k, v in opts.items():
                 if k in ('author', 'date', 'amend', 'signoff', 'cleanup',
                          'reset_author', 'gpg_sign', 'no_gpg_sign',
-                         'reedit_message', 'reuse_message'):
+                         'reedit_message', 'reuse_message', 'quiet'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -175,6 +175,8 @@ def main():
     parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
     parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
     parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
+    parser.add_argument('--quiet', default=False, action='store_true', help='pass --quiet to git commit')
+    parser.add_argument('--confirm', default=False, action='store_true', help='show confirmation prompt after selecting changes')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
     group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)

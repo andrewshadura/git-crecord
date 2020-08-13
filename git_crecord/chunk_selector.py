@@ -1056,6 +1056,9 @@ The following are valid keystrokes:
     def confirmcommit(self, review=False):
         """Ask for 'Y' to be pressed to confirm selected. Return True if
         confirmed."""
+        if not self.opts['confirm']:
+            return True
+
         if review:
             confirmtext = (
 """If you answer yes to the following, the your currently chosen patch chunks
