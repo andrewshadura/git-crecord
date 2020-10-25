@@ -58,36 +58,9 @@ build_py.build_py = build_py_new
 __name__ = "git-crecord"
 
 setup(
-    name = __name__,
-    version = "20161226.0",
-    author = 'Andrej Shadura',
-    author_email = 'andrew@shadura.me',
-    url = 'https://github.com/andrewshadura/git-crecord',
-    description = 'interactively select chunks to commit with Git',
-    long_description = read('README.rst'),
-    license = 'GPL-2+',
-    packages = find_packages(),
-    python_requires = '~=3.6',
-    setup_requires = ['docutils>=0.12'],
-    classifiers = [
-        'Development Status :: 4 - Beta',
-        'Environment :: Console :: Curses',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
-        'Topic :: Software Development :: Version Control',
-    ],
-    include_package_data = True,
     data_files = [
         (os.path.join('share', 'doc', __name__), glob('*.rst')),
         (os.path.join('share', 'doc', __name__), glob('*.png')),
         (os.path.join('share', 'doc', __name__), ['CONTRIBUTORS', 'COPYING'])
-    ] + man_files(__manpages__),
-    entry_points = {
-        'console_scripts': [
-            'git-crecord = git_crecord.main:main'
-        ]
-    }
+    ] + man_files(__manpages__)
 )
