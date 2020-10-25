@@ -99,6 +99,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         index_backup = None
         try:
             index_backup = repo.open_index()
+            index_backup.backup_tree()
 
             # backup continues
             for f in newfiles:
@@ -166,7 +167,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 ui.commit(*newfiles, **opts)
             else:
                 ui.stage(*newfiles, **opts)
-            ui.debug('previous staging contents backed up as tree %r\n' % index_backup.backup_tree())
+            ui.debug('previous staging contents backed up as tree %r\n' % index_backup.indextree)
             index_backup = None
 
             return 0

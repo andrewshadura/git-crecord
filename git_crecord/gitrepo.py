@@ -18,23 +18,23 @@ class GitTree(object):
 class GitIndex(object):
     def __init__(self, filename):
         self._filename = filename
-        try:
-            self._indextree = self.commit()
-
-        except RuntimeError as inst:
-            raise util.Abort('failed to read the index: %s' % inst)
+        self.indextree = None
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__, self._filename, self._indextree)
+        return "%s(%r, %r)" % (self.__class__.__name__, self._filename, self.indextree)
 
     def commit(self):
         return util.systemcall(['git', 'write-tree'], onerr=RuntimeError).rstrip('\n')
 
     def write(self):
-        GitTree(self._indextree).read()
+        GitTree(self.indextree).read()
 
     def backup_tree(self):
-        return self._indextree
+        try:
+            self.indextree = self.commit()
+        except RuntimeError as inst:
+            raise util.Abort('failed to read the index: %s' % inst)
+        return self.indextree
 
 class GitRepo(object):
     def __init__(self, path):
