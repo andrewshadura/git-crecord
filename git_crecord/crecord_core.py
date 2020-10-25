@@ -109,7 +109,9 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                                dir=backupdir)
                 os.close(fd)
                 ui.debug('backup %r as %r\n' % (f, tmpname))
-                util.copyfile(os.path.join(repo.path, f), tmpname)
+                pathname = os.path.join(repo.path, f)
+                if os.path.isfile(pathname):
+                    util.copyfile(pathname, tmpname)
                 if f in modified:
                     backups[f] = tmpname
                 elif f in added:
@@ -138,7 +140,9 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                        onerr=util.Abort, errprefix=_("checkout failed"))
             # remove newly added files from 'clean' repo (so patch can apply)
             for f in newly_added_backups:
-                os.unlink(os.path.join(repo.path, f))
+                pathname = os.path.join(repo.path, f)
+                if os.path.isfile(pathname):
+                    os.unlink(pathname)
 
             # 3b. (apply)
             if dopatch:
