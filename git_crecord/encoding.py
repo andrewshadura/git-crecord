@@ -91,7 +91,7 @@ fallbackencoding = 'ISO-8859-1'
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
     # dict to be exported to other modules
-    environ = dict((tolocal(k.encode('utf-8')), tolocal(v.encode('utf-8')))
+    environ = dict((k.encode('utf-8'), v.encode('utf-8'))
                    for k, v in os.environ.items())
 
 # How to treat ambiguous-width characters. Set to 'WFA' to treat as wide.
