@@ -144,6 +144,8 @@ class Ui:
             else:
                 util.system(['git', 'commit', '-F', name] + args + ['--'] + list(files),
                            onerr=util.Abort, errprefix=_("commit failed"))
+            # refresh the index so that gitk doesn’t show empty staged diffs
+            util.systemcall(['git', 'update-index', '--ignore-submodules', '-q', '--ignore-missing', '--unmerged', '--refresh'])
 
         finally:
             os.unlink(name)
