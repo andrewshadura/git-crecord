@@ -33,9 +33,16 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
         In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
+
+        Disable `core.quotePath` to support non-ASCII filenames.
+        By default (with `core.quotePath=true`) `git diff` only shows filename characters printable in ASCII,
+        and the presence of any character higher than U+007F will cause `git diff`'s output to double-quote
+        the filename and replace the non-ASCII characters in that filename with their octal representations.
+        The double-quoting (i.e. `diff --git "a/` instead of `diff --git a/`) breaks `crecord`'s stdout parsing.
+        https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath
         """
 
-        git_args = ["git", "-c", "diff.mnemonicprefix=false", "diff", "--binary"]
+        git_args = ["git", "-c", "core.quotepath=false", "-c", "diff.mnemonicprefix=false", "diff", "--binary"]
         git_base = []
 
         if opts['cached']:
