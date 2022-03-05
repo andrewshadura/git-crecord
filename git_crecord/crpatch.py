@@ -598,8 +598,22 @@ def parsepatch(fp):
     ...  8
     ... +9'''
     >>> fp = io.BytesIO(rawpatch)
-    >>> out = io.StringIO()
     >>> headers = parsepatch(fp)
+
+    Headers and hunks are interspersed in the list returned from
+    the function:
+    >>> headers
+    [<header 'folder1/g' 'folder1/g'>,
+     <hunk 'folder1/g'@1>,
+     <hunk 'folder1/g'@7>,
+     <hunk 'folder1/g'@9>]
+
+    Each header also provides a list of hunks belonging to it:
+    >>> headers[0].hunks
+    [<hunk 'folder1/g'@1>,
+     <hunk 'folder1/g'@7>,
+     <hunk 'folder1/g'@9>]
+    >>> out = io.StringIO()
     >>> for header in headers:
     ...     header.write(out)
     >>> print(out.getvalue())
