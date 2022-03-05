@@ -11,7 +11,7 @@ class PatchError(Exception):
 
 lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
 
-class linereader(object):
+class linereader:
     # simple class to allow pushing lines back into the input stream
     def __init__(self, fp):
         self.fp = fp
@@ -112,7 +112,7 @@ def scanpatch(fp):
             else:
                 raise PatchError('unknown patch content: %r' % line)
 
-class patchnode(object):
+class patchnode:
     """Abstract Class for Patch Graph Nodes
     (i.e. PatchRoot, header, hunk, HunkLine)
     """
@@ -636,7 +636,7 @@ def parsepatch(fp):
     +9
     """
 
-    class parser(object):
+    class parser:
         """patch parsing state machine"""
         def __init__(self):
             self.fromline = 0

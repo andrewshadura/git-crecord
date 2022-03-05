@@ -67,7 +67,7 @@ def chunkselector(opts, headerlist, ui):
     import locale
     locale.setlocale(locale.LC_ALL, '')
 
-    class dummystdscr(object):
+    class dummystdscr:
         def clear(self):
             pass
         def refresh(self):
@@ -94,7 +94,7 @@ _confirmmessages = {
     'cunstage': _('Are you sure you want to unstage the unselected changes [Yn]?'),
 }
 
-class CursesChunkSelector(object):
+class CursesChunkSelector:
     def __init__(self, headerlist, ui):
         # put the headers into a patch object
         self.headerlist = patch(headerlist)

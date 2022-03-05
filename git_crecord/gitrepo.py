@@ -4,7 +4,7 @@ from . import util
 
 INDEX_FILENAME = "index"
 
-class GitTree(object):
+class GitTree:
     def __init__(self, tree):
         self._tree = tree
 
@@ -15,7 +15,7 @@ class GitTree(object):
         util.system(['git', 'read-tree', '--reset',
                      self._tree], onerr=RuntimeError)
 
-class GitIndex(object):
+class GitIndex:
     def __init__(self, filename):
         self._filename = filename
         self.indextree = None
@@ -36,7 +36,7 @@ class GitIndex(object):
             raise util.Abort('failed to read the index: %s' % inst)
         return self.indextree
 
-class GitRepo(object):
+class GitRepo:
     def __init__(self, path):
         try:
             self.path = util.systemcall(['git', 'rev-parse', '--show-toplevel'],
