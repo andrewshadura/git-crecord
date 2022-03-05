@@ -13,42 +13,6 @@ import os
 import unicodedata
 import sys
 
-class pycompat:
-    ispy3 = (sys.version_info[0] >= 3)
-
-if pycompat.ispy3:
-    import builtins
-
-    def _sysstr(s):
-        """Return a keyword str to be passed to Python functions such as
-        getattr() and str.encode()
-
-        This never raises UnicodeDecodeError. Non-ascii characters are
-        considered invalid and mapped to arbitrary but unique code points
-        such that 'sysstr(a) != sysstr(b)' for all 'a != b'.
-        """
-        if isinstance(s, builtins.str):
-            return s
-        return s.decode('latin-1')
-else:
-    def _sysstr(s):
-        return s
-
-if pycompat.ispy3:
-    unichr = chr
-
-# encoding.environ is provided read-only, which may not be used to modify
-# the process environment
-_nativeenviron = (not pycompat.ispy3 or os.supports_bytes_environ)
-if not pycompat.ispy3:
-    environ = os.environ
-elif _nativeenviron:
-    environ = os.environb
-else:
-    # preferred encoding isn't known yet; use utf-8 to avoid unicode error
-    # and recreate it once encoding is settled
-    environ = dict((k.encode('utf-8'), v.encode('utf-8'))
-                   for k, v in os.environ.items())
 
 def _getpreferredencoding():
     '''
@@ -74,6 +38,7 @@ def _getpreferredencoding():
 
     return result
 
+
 _encodingfixers = {
     '646': lambda: 'ascii',
     'ANSI_X3.4-1968': lambda: 'ascii',
@@ -88,29 +53,17 @@ except locale.Error:
 encodingmode = "strict"
 fallbackencoding = 'ISO-8859-1'
 
-if not _nativeenviron:
-    # now encoding and helper functions are available, recreate the environ
-    # dict to be exported to other modules
-    environ = dict((k.encode('utf-8'), v.encode('utf-8'))
-                   for k, v in os.environ.items())
-
 # How to treat ambiguous-width characters. Set to 'WFA' to treat as wide.
 wide = "WF"
 
+
 def ucolwidth(d):
-    "Find the column width of a Unicode string for display"
+    """Find the column width of a Unicode string for display"""
     eaw = getattr(unicodedata, 'east_asian_width', None)
     if eaw is not None:
         return sum([eaw(c) in wide and 2 or 1 for c in d])
     return len(d)
 
-def getcols(s, start, c):
-    '''Use colwidth to find a c-column substring of s starting at byte
-    index start'''
-    for x in range(start + c, len(s)):
-        t = s[start:x]
-        if colwidth(t) == c:
-            return t
 
 def trim(s, width, ellipsis='', leftside=False):
     """Trim string 's' to at most 'width' columns (including 'ellipsis').
@@ -155,11 +108,11 @@ def trim(s, width, ellipsis='', leftside=False):
     >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
     +++
     """
-    if ucolwidth(s) <= width: # trimming is not needed
+    if ucolwidth(s) <= width:  # trimming is not needed
         return s
 
     width -= len(ellipsis)
-    if width <= 0: # no enough room even for ellipsis
+    if width <= 0:  # no enough room even for ellipsis
         return ellipsis[:width + len(ellipsis)]
 
     if leftside:
@@ -172,5 +125,4 @@ def trim(s, width, ellipsis='', leftside=False):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
             return concat(usub)
-    return ellipsis # no enough room for multi-column characters
-
+    return ellipsis  # no enough room for multi-column characters
