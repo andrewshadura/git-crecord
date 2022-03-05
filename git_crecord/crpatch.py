@@ -32,12 +32,48 @@ class linereader(object):
         return iter(self.readline, '')
 
 def scanpatch(fp):
-    """like patch.iterhunks, but yield different events
+    r"""Read a patch and yield the following events:
 
     - ('file',    [header_lines + fromfile + tofile])
     - ('context', [context_lines])
     - ('hunk',    [hunk_lines])
     - ('range',   (-start,len, +start,len, diffp))
+
+    >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
+    ... --- a/folder1/g
+    ... +++ b/folder1/g
+    ... @@ -1,8 +1,10 @@
+    ...  1
+    ...  2
+    ... -3
+    ...  4
+    ...  5
+    ...  6
+    ... +6.1
+    ... +6.2
+    ...  7
+    ...  8
+    ... +9'''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> list(scanpatch(fp))
+    [('file',
+        ['diff --git a/folder1/g b/folder1/g\n',
+         '--- a/folder1/g\n',
+         '+++ b/folder1/g\n']),
+     ('range',
+        ('1', '8', '1', '10', '')),
+     ('context',
+        [' 1\n', ' 2\n']),
+     ('hunk',
+        ['-3\n']),
+     ('context',
+        [' 4\n', ' 5\n', ' 6\n']),
+     ('hunk',
+        ['+6.1\n', '+6.2\n']),
+     ('context',
+        [' 7\n', ' 8\n']),
+     ('hunk',
+        ['+9'])]
     """
     lr = linereader(fp)
 
