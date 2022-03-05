@@ -544,7 +544,48 @@ class uihunk(patchnode):
 
 
 def parsepatch(fp):
-    "Parse a patch, returning a list of header and hunk objects."
+    """Parse a patch, returning a list of header and hunk objects.
+
+    >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
+    ... --- a/folder1/g
+    ... +++ b/folder1/g
+    ... @@ -1,8 +1,10 @@
+    ...  1
+    ...  2
+    ... -3
+    ...  4
+    ...  5
+    ...  6
+    ... +6.1
+    ... +6.2
+    ...  7
+    ...  8
+    ... +9'''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> out = io.StringIO()
+    >>> headers = parsepatch(fp)
+    >>> for header in headers:
+    ...     header.write(out)
+    >>> print(out.getvalue())
+    diff --git a/folder1/g b/folder1/g
+    --- a/folder1/g
+    +++ b/folder1/g
+    @@ -1,6 +1,5 @@
+     1
+     2
+    -3
+     4
+     5
+     6
+    @@ -7,2 +6,4 @@
+    +6.1
+    +6.2
+     7
+     8
+    @@ -8,0 +10,1 @@
+    +9
+    """
+
     class parser(object):
         """patch parsing state machine"""
         def __init__(self):
