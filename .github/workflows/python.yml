@@ -37,3 +37,15 @@ jobs:
           pip install .
           ./setup.py build sdist bdist
 
+      - name: Install test dependencies
+        run: pip install .[test]
+
+      - name: Run tests
+        run: pytest -vv --junit-xml=test-results.xml --junit-prefix=py${{ matrix.python-version }}
+
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@v2
+        if: always() # always run even if the previous step fails
+        with:
+          check_name: Test report for Python ${{ matrix.python-version }}
+          report_paths: test-results.xml
