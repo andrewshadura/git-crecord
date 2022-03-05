@@ -6,6 +6,8 @@ from gettext import gettext as _
 import io
 import re
 
+from typing import IO
+
 class PatchError(Exception):
     pass
 
@@ -13,15 +15,15 @@ lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
 
 class linereader:
     # simple class to allow pushing lines back into the input stream
-    def __init__(self, fp):
+    def __init__(self, fp: IO[bytes]):
         self.fp = fp
         self.buf = []
 
-    def push(self, line):
+    def push(self, line) -> None:
         if line is not None:
             self.buf.append(line)
 
-    def readline(self):
+    def readline(self) -> str:
         if self.buf:
             l = self.buf[0]
             del self.buf[0]
@@ -31,7 +33,7 @@ class linereader:
     def __iter__(self):
         return iter(self.readline, '')
 
-def scanpatch(fp):
+def scanpatch(fp: IO[bytes]):
     r"""Read a patch and yield the following events:
 
     - ('file',    [header_lines + fromfile + tofile])
@@ -579,7 +581,7 @@ class uihunk(patchnode):
 
 
 
-def parsepatch(fp):
+def parsepatch(fp: IO[bytes]):
     """Parse a patch, returning a list of header and hunk objects.
 
     >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
