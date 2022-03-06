@@ -1,18 +1,21 @@
 from gettext import gettext as _
+from pathlib import Path
 from typing import Optional
 
+import argparse
 import os
 import sys
-from . import crecord_core
-from . import util
-from .gitrepo import GitRepo
 import tempfile
-import argparse
+
+from . import crecord_core
+from .gitrepo import GitRepo
+from .util import Abort, system, systemcall
+
 
 class Config:
     def get(self, section, item, default=None) -> Optional[str]:
         try:
-            return util.systemcall(
+            return systemcall(
                 ['git', 'config', '--get', '%s.%s' % (section, item)],
                 onerr=KeyError,
                 encoding="UTF-8",
@@ -61,48 +64,41 @@ class Ui:
                 'sensible-editor')
 
     def edit(self, text: bytes, user, extra=None, name=None) -> bytes:
-        fd = None
-        if name is None:
-            (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
-                                      suffix=".txt", text=True)
+        f = tempfile.NamedTemporaryFile(
+            prefix='git-crecord-',
+            suffix=".txt",
+            mode="wb",
+            delete=False,
+        )
         try:
-            if fd is not None:
-                f = os.fdopen(fd, "wb")
-            else:
-                f = open(name, "wb")
             f.write(text)
             f.close()
 
             editor = self.editor
 
-            util.system("%s \"%s\"" % (editor, name),
-                       onerr=util.Abort, errprefix=_("edit failed"))
+            system("%s \"%s\"" % (editor, f.name),
+                   onerr=Abort, errprefix=_("edit failed"))
 
-            f = open(name, "rb")
-            t = f.read()
-            f.close()
+            t = Path(f.name).read_bytes()
+
         finally:
-            if fd is not None:
-                os.unlink(name)
+            os.unlink(f.name)
 
         return t
 
     def stage(self, *files, **opts):
         to_add = [f for f in files if os.path.exists(f)]
         if to_add:
-            util.system(['git', 'add', '-f', '-N', '--'] + to_add,
-                       onerr=util.Abort, errprefix=_("add failed"))
+            system(['git', 'add', '-f', '-N', '--'] + to_add,
+                   onerr=Abort, errprefix=_("add failed"))
 
     def commit(self, *files, **opts):
-        (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
-                                      suffix=".txt", text=True)
+        msgfile = self.repo.controldir / "CRECORD_COMMITMSG"
         try:
             args = []
 
-            f = os.fdopen(fd, "w")
             if opts['message']:
-                f.write(opts['message'])
-            f.close()
+                msgfile.write_text(opts['message'])
 
             if opts['cleanup'] is None:
                 opts['cleanup'] = 'strip'
@@ -121,19 +117,19 @@ class Ui:
 
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:
-                util.system(['git', 'add', '-f', '-N', '--'] + to_add,
-                           onerr=util.Abort, errprefix=_("add failed"))
+                system(['git', 'add', '-f', '-N', '--'] + to_add,
+                       onerr=Abort, errprefix=_("add failed"))
             if not opts['message']:
-                util.system(['git', 'commit'] + args + ['--'] + list(files),
-                           onerr=util.Abort, errprefix=_("commit failed"))
+                system(['git', 'commit'] + args + ['--'] + list(files),
+                       onerr=Abort, errprefix=_("commit failed"))
             else:
-                util.system(['git', 'commit', '-F', name] + args + ['--'] + list(files),
-                           onerr=util.Abort, errprefix=_("commit failed"))
+                system(['git', 'commit', '-F', msgfile.name] + args + ['--'] + list(files),
+                       onerr=Abort, errprefix=_("commit failed"))
             # refresh the index so that gitk doesn’t show empty staged diffs
-            util.systemcall(['git', 'update-index', '--ignore-submodules', '-q', '--ignore-missing', '--unmerged', '--refresh'])
+            systemcall(['git', 'update-index', '--ignore-submodules', '-q', '--ignore-missing', '--unmerged', '--refresh'])
 
         finally:
-            os.unlink(name)
+            msgfile.unlink(missing_ok=True)
 
 
 def main():
@@ -186,7 +182,7 @@ def main():
 
     try:
         crecord_core.dorecord(ui, repo, None, **(opts))
-    except util.Abort as inst:
+    except Abort as inst:
         sinst = str(inst)
         if opts['quiet'] and 'commit failed' in sinst:
             sys.exit(5)
