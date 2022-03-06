@@ -261,17 +261,6 @@ class PatchNode:
             return b.getvalue()
 
 
-class PatchRoot(PatchNode, list):
-    """List of header objects representing the patch."""
-
-    def __init__(self, headerlist):
-        super().__init__()
-        self.extend(headerlist)
-        # add parent patch object reference to each header
-        for header in self:
-            header.patch = self
-
-
 class Header(PatchNode):
     """Patch header"""
     diff_re = re.compile(b'diff --git a/(.*) b/(.*)$')
@@ -662,7 +651,26 @@ class Hunk(PatchNode):
         return '<hunk %r@%d>' % (self.files()[1] or self.files()[0], self.fromline)
 
 
-def parsepatch(fp: IO[bytes]):
+class PatchRoot(PatchNode, list):
+    """List of header objects representing the patch."""
+
+    def __init__(self, headerlist):
+        super().__init__()
+        self.extend(headerlist)
+        # add parent patch object reference to each header
+        for header in self:
+            header.patch = self
+
+    @property
+    def headers(self) -> Sequence[Header]:
+        return [c for c in self if isinstance(c, Header)]
+
+    @property
+    def hunks(self) -> Sequence[Hunk]:
+        return [c for c in self if isinstance(c, Hunk)]
+
+
+def parsepatch(fp: IO[bytes]) -> PatchRoot:
     r"""Parse a patch, returning a list of header and hunk objects.
 
     >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
@@ -878,25 +886,68 @@ def parsepatch(fp: IO[bytes]):
             raise PatchError('unhandled transition: %s -> %s' %
                              (state, newstate))
         state = newstate
-    return p.finished()
+    return PatchRoot(p.finished())
 
 
-def filterpatch(opts, chunks, chunkselector, ui):
-    """Interactively filter patch chunks into applied-only chunks"""
-    chunks = list(chunks)
-    # convert chunks list into structure suitable for displaying/modifying
-    # with curses.  Create a list of headers only.
-    headers = [c for c in chunks if isinstance(c, Header)]
+def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
+    r"""Interactively filter patch chunks into applied-only chunks
 
+    >>> rawpatch = b'''diff --git a/dir/file.c b/dir/file.c
+    ... index e548702cb275..28208f7ff2ac 100644
+    ... --- a/dir/file.c
+    ... +++ b/dir/file.c
+    ... @@ -1684,11 +1684,13 @@ int function()
+    ...  1
+    ...  2
+    ...  3
+    ... -4
+    ... -5
+    ... -6
+    ... -7
+    ...  8
+    ... +9
+    ... +10
+    ... +11
+    ... +12
+    ... +13
+    ... +14
+    ...  15
+    ...  16
+    ...  17
+    ... '''
+    >>> patch = parsepatch(io.BytesIO(rawpatch))
+    >>> patch
+    [<header b'dir/file.c' b'dir/file.c'>,
+     <hunk b'dir/file.c'@1684>,
+     <hunk b'dir/file.c'@1692>]
+    >>> def selector(opts, headers, ui):
+    ...     headers[0].hunks[0].applied = False
+    ... 
+    >>> applied = filterpatch(None, patch, selector, None)
+    >>> applied
+    [<header b'dir/file.c' b'dir/file.c'>,
+     <hunk b'dir/file.c'@1692>]
+    >>> print(applied.hunks[0])
+    @@ -1692,3 +1692,9 @@
+    +9
+    +10
+    +11
+    +12
+    +13
+    +14
+     15
+     16
+     17
+    """
     # if there are no changed files
-    if len(headers) == 0:
+    if len(patch) == 0:
         return []
 
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
-    chunkselector(opts, headers, ui)
+    chunkselector(opts, patch.headers, ui)
 
-    applied_hunks = []
-    for header in headers:
+    applied_hunks = PatchRoot([])
+    for header in patch.headers:
         if (header.applied and
                 (header.special() or header.binary() or len([
                     h for h in header.hunks if h.applied
