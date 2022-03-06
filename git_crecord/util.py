@@ -1,12 +1,17 @@
-# util.py - utility functions from Mercurial
+# Utility functions
 #
 #  Copyright 2006, 2015 Matt Mackall <mpm@selenic.com>
 #  Copyright 2007 Eric St-Jean <esj@wwd.ca>
 #  Copyright 2009, 2011 Mads Kiilerich <mads@kiilerich.com>
 #  Copyright 2015 Pierre-Yves David <pierre-yves.david@fb.com>
+#  Copyright 2016, 2022 Andrej Shadura <andrew@shadura.me>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version
+#
+# Some of these utilities were originally taken from Mercurial.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from gettext import gettext as _
 import os

@@ -1,3 +1,12 @@
+# Git wrapper for repo/tree/index manipulation
+#
+# Copyright 2016, 2018—2022 Andrej Shadura <andrew@shadura.me>
+#
+# This software may be used and distributed according to the terms of
+# the GNU General Public License, incorporated herein by reference.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 import os
 import sys
 from pathlib import Path

@@ -1,3 +1,12 @@
+# git-crecord entry point and configuration helpers
+#
+# Copyright 2016, 2018—2022 Andrej Shadura <andrew@shadura.me>
+#
+# This software may be used and distributed according to the terms of
+# the GNU General Public License, incorporated herein by reference.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from gettext import gettext as _
 from pathlib import Path
 from typing import Optional

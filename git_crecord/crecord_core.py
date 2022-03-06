@@ -1,13 +1,15 @@
-# crecord.py
+# Record process driver
 #
-# Copyright 2008 Mark Edgington <edgimar@gmail.com>
+# Copyright 2008—2011, 2014 Mark Edgington <edgimar@gmail.com>
+# Copyright 2016, 2018—2022 Andrej Shadura <andrew@shadura.me>
 #
 # This software may be used and distributed according to the terms of
 # the GNU General Public License, incorporated herein by reference.
 #
 # Much of this extension is based on Bryan O'Sullivan's record extension.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
-'''text-gui based change selection during commit or qrefresh'''
 from gettext import gettext as _
 
 import io

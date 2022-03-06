@@ -1,4 +1,14 @@
-from __future__ import unicode_literals
+# Git diff parser and related structures
+#
+# Copyright 2008—2011, 2014 Mark Edgington <edgimar@gmail.com>
+# Copyright 2016, 2018—2022 Andrej Shadura <andrew@shadura.me>
+#
+# This software may be used and distributed according to the terms of
+# the GNU General Public License, incorporated herein by reference.
+#
+# This code is based on the patch parser of Mercurial.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 # stuff related specifically to patch manipulation / parsing
 from gettext import gettext as _

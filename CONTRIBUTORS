@@ -1,13 +1,27 @@
 The original crecord code was ported to Git by:
 
- * Andrej Shadura <andrew@shadura.me> 2016
+ * Andrej Shadura <andrew@shadura.me> 2016, 2018—2022
+
+The following people have contributed to git-crecord as a separate project:
+
+ * Allison Reid <root@cooltrainer.org> 2021
+ * Daniel Zimmerman <zim@snap.com> 2020
+ * Arun Chandrasekaran <aruncxy@gmail.com> 2019
+ * James Rowe <jnrowe@gmail.com> 2018
 
 The following people have contributed to crecord code in Mercurial:
 
+ * Alexander Kobjolke <alex@jakalx.net> 2019
+ * Yuya Nishihara <yuya@tcha.org> 2019
+ * Kyle Lippincott <spectral@google.com> 2019
+ * Pulkit Goyal <7895pulkit@gmail.com> 2016, 2018, 2019
+ * Elmar Bartel <elb_hg@leo.org> 2018
+ * Matti Hämäläinen <ccr@tnsp.org> 2018
+ * Pierre-Yves David <pierre-yves.david@octobus.net> 2017
+ * Augie Fackler <augie@google.com> 2016
  * Anton Shestakov <av6@dwimlabs.net> 2016
  * Jun Wu <quark@fb.com> 2016
  * Nathan Goldbaum <ngoldbau@illinois.edu> 2016
- * Pulkit Goyal <7895pulkit@gmail.com> 2016
  * Ryan McElroy <rmcelroy@fb.com> 2016
  * Laurent Charignon <lcharignon@fb.com> 2015
  * Matt Mackall <mpm@selenic.com> 2015
@@ -21,7 +35,7 @@ extension:
  * Siddharth Agarwal <sid0@fb.com> 2015
  * immerrr <immerrr@gmail.com> 2012-2014
  * Jordi Gutiérrez Hermoso <jordigh@octave.org> 2014
- * Pierre-Yves David <pierre-yves.david@fb.com> 2014
+ * Pierre-Yves David <pierre-yves.david@octobus.net> 2014
  * Christian Ebert <blacktrash@gmx.net> 2010-2011
  * Peter Arrenbrecht <peter.arrenbrecht@gmail.com> 2011
  * Steve Fink <sfink@mozilla.com> 2011
@@ -34,7 +48,9 @@ The following people have contributed to the parts of the Mercurial utils
 module used by crecord:
 
  * Matt Mackall <mpm@selenic.com> 2006, 2015
- * Eric St-Jean <esj@wwd.ca> 2007
- * Mads Kiilerich <mads@kiilerich.com> 2009
  * Pierre-Yves David <pierre-yves.david@fb.com> 2015
+ * Augie Fackler <durin42@gmail.com> 2011
+ * FUJIWARA Katsunori <foozy@lares.dti.ne.jp> 2010, 2011
+ * Mads Kiilerich <mads@kiilerich.com> 2009
+ * Eric St-Jean <esj@wwd.ca> 2007
 
