@@ -5,12 +5,9 @@ from . import util
 
 from . import encoding
 
-import os
 import re
 import sys
-import fcntl
 import struct
-import termios
 import signal
 
 from .crpatch import PatchRoot, Header, Hunk, HunkLine
