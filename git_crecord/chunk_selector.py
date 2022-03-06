@@ -1026,8 +1026,8 @@ The following are valid keystrokes:
         curses.raw()
         curses.def_prog_mode()
         curses.endwin()
-        commenttext = self.ui.edit(commenttext, self.ui.username(),
-                                   name=os.path.join(self.ui.repo.controldir(),
+        commenttext = self.ui.edit(commenttext, self.ui.username,
+                                   name=os.path.join(self.ui.repo.controldir,
                                                      'COMMIT_EDITMSG'))
         curses.cbreak()
         self.stdscr.refresh()
@@ -1258,10 +1258,6 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
 
         # option which enables/disables patch-review (in editor) step
         self.opts['crecord_reviewpatch'] = False
-
-        if self.opts['author'] is not None:
-            # make it accessible by self.ui.username()
-            self.ui.setusername(self.opts['author'])
 
         while True:
             self.updatescreen()

@@ -28,10 +28,6 @@ class Ui:
         self.repo = repo
         self.config = Config()
         self.debuglevel = 0
-        try:
-            self._username = "%s <%s>" % (self.config.get("user", "name"), self.config.get("user", "email"))
-        except KeyError:
-            self._username = None
 
     def print_message(self, *msg, debuglevel: int, **opts):
         if self.debuglevel < debuglevel:
@@ -56,20 +52,13 @@ class Ui:
     def setdebuglevel(self, level):
         self.debuglevel = level
 
-    def setusername(self, username):
-        self._username = username
-
-    def username(self):
-        if self._username is None:
-            util.Abort(_("no name or email for the author was given"))
-        return self._username
-
-    def geteditor(self):
-        editor = 'sensible-editor'
+    @property
+    def editor(self) -> str:
         return (os.environ.get("GIT_EDITOR") or
                 self.config.get("core", "editor") or
                 os.environ.get("VISUAL") or
-                os.environ.get("EDITOR", editor))
+                os.environ.get("EDITOR") or
+                'sensible-editor')
 
     def edit(self, text: bytes, user, extra=None, name=None) -> bytes:
         fd = None
@@ -84,7 +73,7 @@ class Ui:
             f.write(text)
             f.close()
 
-            editor = self.geteditor()
+            editor = self.editor
 
             util.system("%s \"%s\"" % (editor, name),
                        onerr=util.Abort, errprefix=_("edit failed"))
