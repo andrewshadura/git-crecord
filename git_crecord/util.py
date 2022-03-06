@@ -15,9 +15,13 @@ import os
 import subprocess
 import shutil
 import sys
+from typing import AnyStr, overload, Sequence, Optional
+
 from . import encoding
 
+
 closefds = os.name == 'posix'
+
 
 def explainexit(code):
     """return a 2-tuple (desc, code) describing a subprocess status
@@ -27,8 +31,10 @@ def explainexit(code):
     else:
         return _("exited with status %d") % code, code
 
+
 class Abort(Exception):
     pass
+
 
 def system(cmd, cwd=None, onerr=None, errprefix=None):
     try:
@@ -53,16 +59,38 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
         raise onerr(errmsg)
     return rc
 
-def systemcall(cmd, onerr=None, errprefix=None):
+
+@overload
+def systemcall(
+        cmd: Sequence[AnyStr],
+        encoding: str,
+        dir: Optional[os.PathLike] = None,
+        onerr=None,
+        errprefix=None
+) -> str:
+    ...
+
+
+@overload
+def systemcall(
+        cmd: Sequence[AnyStr],
+        dir: Optional[os.PathLike] = None,
+        onerr=None,
+        errprefix=None
+) -> bytes:
+    ...
+
+
+def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
     try:
         sys.stdout.flush()
     except Exception:
         pass
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, close_fds=closefds)
-    out = ''
+    p = subprocess.Popen(cmd, cwd=dir, stdout=subprocess.PIPE, close_fds=closefds)
+    out = b''
     for line in iter(p.stdout.readline, b''):
-        out = out + line.decode(encoding.encoding)
+        out = out + line
     p.wait()
     rc = p.returncode
 
@@ -73,7 +101,13 @@ def systemcall(cmd, onerr=None, errprefix=None):
             errmsg = '%s: %s' % (errprefix, errmsg)
         raise onerr(errmsg)
 
-    return out
+    if encoding == "fs":
+        return os.fsdecode(out)
+    elif encoding:
+        return out.decode(encoding)
+    else:
+        return out
+
 
 def copyfile(src, dest, hardlink=False, copystat=False):
     '''copy a file, preserving mode and optionally other stat info like
@@ -103,10 +137,14 @@ def copyfile(src, dest, hardlink=False, copystat=False):
         except shutil.Error as inst:
             raise Abort(str(inst))
 
+
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
     return encoding.trim(text, maxlength, ellipsis='...')
 
+
 _notset = object()
+
+
 def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset

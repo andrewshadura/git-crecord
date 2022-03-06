@@ -686,7 +686,7 @@ class CursesChunkSelector:
 
         return checkbox
 
-    def printheader(self, header, selected=False, towin=True,
+    def printheader(self, header: Header, selected=False, towin=True,
                     ignorefolding=False):
         """
         Print the header to the pad.  If countLines is True, don't print
@@ -726,7 +726,7 @@ class CursesChunkSelector:
 
         return outstr
 
-    def printhunklinesbefore(self, hunk, selected=False, towin=True,
+    def printhunklinesbefore(self, hunk: Hunk, selected=False, towin=True,
                              ignorefolding=False):
         "includes start/end line indicator"
         outstr = ""
@@ -745,11 +745,10 @@ class CursesChunkSelector:
         checkbox = self.getstatusprefixstring(hunk)
 
         lineprefix = " "*self.hunkindentnumchars + checkbox
-        frtoline = "   " + hunk.getfromtoline().strip("\n")
-
+        frtoline = "   " + hunk.getfromtoline().decode("UTF-8", errors="hexreplace").strip("\n")
 
         outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
-                                   align=False) # add uncolored checkbox/indent
+                                   align=False)  # add uncolored checkbox/indent
         outstr += self.printstring(self.chunkpad, frtoline, pair=colorpair,
                                    towin=towin)
 
@@ -759,12 +758,12 @@ class CursesChunkSelector:
 
         # print out lines of the chunk preceding changed-lines
         for line in hunk.before:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
 
-    def printhunklinesafter(self, hunk, towin=True, ignorefolding=False):
+    def printhunklinesafter(self, hunk: Hunk, towin=True, ignorefolding=False):
         outstr = ""
         if hunk.folded and not ignorefolding:
             return outstr
@@ -772,12 +771,12 @@ class CursesChunkSelector:
         # a bit superfluous, but to avoid hard-coding indent amount
         checkbox = self.getstatusprefixstring(hunk)
         for line in hunk.after:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
 
-    def printhunkchangedline(self, hunkline, selected=False, towin=True):
+    def printhunkchangedline(self, hunkline: HunkLine, selected=False, towin=True):
         outstr = ""
         checkbox = self.getstatusprefixstring(hunkline)
 

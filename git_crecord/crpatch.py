@@ -5,35 +5,47 @@ from gettext import gettext as _
 
 import io
 import re
+from codecs import register_error
 
-from typing import IO, Iterator, Optional
+from typing import IO, Iterator, Optional, Sequence, Union
 
-lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
+lines_re = re.compile(b'@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@\\s*(.*)')
 
 
 class PatchError(Exception):
     pass
 
 
+def hexreplace(err: UnicodeError) -> tuple[str, int]:
+    if not isinstance(err, UnicodeDecodeError):
+        raise NotImplementedError("only decoding is supported")
+    return "".join(
+        "<%X>" % x for x in err.object[err.start:err.end]
+    ), err.end
+
+
+register_error("hexreplace", hexreplace)
+
+
 class LineReader:
     # simple class to allow pushing lines back into the input stream
     def __init__(self, fp: IO[bytes]):
         self.fp = fp
-        self.buf: list[str] = []
+        self.buf: list[bytes] = []
 
-    def push(self, line: str) -> None:
+    def push(self, line: bytes) -> None:
         if line is not None:
             self.buf.append(line)
 
-    def readline(self) -> str:
+    def readline(self) -> bytes:
         if self.buf:
             line = self.buf[0]
             del self.buf[0]
             return line
-        return self.fp.readline().decode('UTF-8')
+        return self.fp.readline()
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.readline, '')
+    def __iter__(self) -> Iterator[bytes]:
+        return iter(self.readline, b'')
 
 
 def scanpatch(fp: IO[bytes]):
@@ -47,7 +59,7 @@ def scanpatch(fp: IO[bytes]):
     >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
     ... --- a/folder1/g
     ... +++ b/folder1/g
-    ... @@ -1,8 +1,10 @@
+    ... @@ -1,8 +1,10 @@ some context
     ...  1
     ...  2
     ... -3
@@ -62,30 +74,30 @@ def scanpatch(fp: IO[bytes]):
     >>> fp = io.BytesIO(rawpatch)
     >>> list(scanpatch(fp))
     [('file',
-        ['diff --git a/folder1/g b/folder1/g\n',
-         '--- a/folder1/g\n',
-         '+++ b/folder1/g\n']),
+        [b'diff --git a/folder1/g b/folder1/g\n',
+         b'--- a/folder1/g\n',
+         b'+++ b/folder1/g\n']),
      ('range',
-        ('1', '8', '1', '10', '')),
+        (b'1', b'8', b'1', b'10', b'some context')),
      ('context',
-        [' 1\n', ' 2\n']),
+        [b' 1\n', b' 2\n']),
      ('hunk',
-        ['-3\n']),
+        [b'-3\n']),
      ('context',
-        [' 4\n', ' 5\n', ' 6\n']),
+        [b' 4\n', b' 5\n', b' 6\n']),
      ('hunk',
-        ['+6.1\n', '+6.2\n']),
+        [b'+6.1\n', b'+6.2\n']),
      ('context',
-        [' 7\n', ' 8\n']),
+        [b' 7\n', b' 8\n']),
      ('hunk',
-        ['+9'])]
+        [b'+9'])]
     """
     lr = LineReader(fp)
 
-    def scanwhile(first, p) -> list[str]:
+    def scanwhile(first: bytes, p) -> list[bytes]:
         """scan lr while predicate holds"""
         lines = [first]
-        for line in iter(lr.readline, ''):
+        for line in iter(lr.readline, b''):
             if p(line):
                 lines.append(line)
             else:
@@ -93,24 +105,24 @@ def scanpatch(fp: IO[bytes]):
                 break
         return lines
 
-    for line in iter(lr.readline, ''):
-        if line.startswith('diff --git a/'):
-            def notheader(line: str) -> bool:
+    for line in iter(lr.readline, b''):
+        if line.startswith(b'diff --git a/'):
+            def notheader(line: bytes) -> bool:
                 s = line.split(None, 1)
-                return not s or s[0] not in ('---', 'diff')
+                return not s or s[0] not in (b'---', b'diff')
 
             header = scanwhile(line, notheader)
             fromfile = lr.readline()
-            if fromfile.startswith('---'):
+            if fromfile.startswith(b'---'):
                 tofile = lr.readline()
                 header += [fromfile, tofile]
             else:
                 lr.push(fromfile)
             yield 'file', header
-        elif line.startswith(' '):
-            yield 'context', scanwhile(line, lambda l: l[0] in ' \\')
-        elif line[0] in '-+':
-            yield 'hunk', scanwhile(line, lambda l: l[0] in '-+\\')
+        elif line.startswith(b' '):
+            yield 'context', scanwhile(line, lambda l: l[0] in b' \\')
+        elif line[0] in b'-+':
+            yield 'hunk', scanwhile(line, lambda l: l[0] in b'-+\\')
         else:
             m = lines_re.match(line)
             if m:
@@ -124,7 +136,8 @@ class PatchNode:
     (i.e. PatchRoot, header, hunk, HunkLine)
     """
 
-    folded: bool = False
+    folded: bool
+    # a patch this node belongs to
     patch: 'PatchRoot'
 
     def firstchild(self):
@@ -133,7 +146,7 @@ class PatchNode:
     def lastchild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-    def allchildren(self) -> list['PatchNode']:
+    def allchildren(self) -> Sequence['PatchNode']:
         """Return a list of all direct children of this node"""
         raise NotImplementedError("method must be implemented by subclass")
 
@@ -235,6 +248,18 @@ class PatchNode:
         # try parent (or None)
         return self.parentitem()
 
+    def write(self, fp: IO[bytes]) -> None:
+        """Write the unified diff-formatter representation of the
+        patch node into the binary stream"""
+        raise NotImplementedError("method must be implemented by subclass")
+
+    def __bytes__(self) -> bytes:
+        """Return the unified diff-formatter representation of the
+        patch node as bytes"""
+        with io.BytesIO() as b:
+            self.write(b)
+            return b.getvalue()
+
 
 class PatchRoot(PatchNode, list):
     """List of header objects representing the patch."""
@@ -249,10 +274,10 @@ class PatchRoot(PatchNode, list):
 
 class Header(PatchNode):
     """Patch header"""
-    diff_re = re.compile('diff --git a/(.*) b/(.*)$')
-    allhunks_re = re.compile('(?:GIT binary patch|new file|deleted file) ')
-    pretty_re = re.compile('(?:new file|deleted file) ')
-    special_re = re.compile('(?:GIT binary patch|new|deleted|copy|rename) ')
+    diff_re = re.compile(b'diff --git a/(.*) b/(.*)$')
+    allhunks_re = re.compile(b'(?:GIT binary patch|new file|deleted file) ')
+    pretty_re = re.compile(b'(?:new file|deleted file) ')
+    special_re = re.compile(b'(?:GIT binary patch|new|deleted|copy|rename) ')
 
     def __init__(self, header):
         self.header = header
@@ -266,9 +291,6 @@ class Header(PatchNode):
         # flag to indicate whether to display as folded/unfolded to user
         self.folded = True
 
-        # list of all headers in patch
-        self.patch = None
-
         # flag is False if this header was ever unfolded from initial state
         self.neverunfolded = True
 
@@ -281,34 +303,37 @@ class Header(PatchNode):
         Otherwise return False.
 
         """
-        return any(h.startswith('GIT binary patch') for h in self.header)
+        return any(h.startswith(b'GIT binary patch') for h in self.header)
 
-    def pretty(self, fp):
+    def pretty(self, fp: IO[str]):
         for h in self.header:
-            if h.startswith('GIT binary patch'):
+            if h.startswith(b'GIT binary patch'):
                 fp.write(_('this modifies a binary file (all or nothing)\n'))
                 break
             if self.pretty_re.match(h):
-                fp.write(h)
+                fp.write(h.decode("UTF-8", errors="hexreplace"))
                 if self.binary():
                     fp.write(_('this is a binary file\n'))
                 break
-            if h.startswith('---'):
+            if h.startswith(b'---'):
                 fp.write(_('%d hunks, %d lines changed\n') %
                          (len(self.hunks),
                           sum([max(h.added, h.removed) for h in self.hunks])))
                 break
-            fp.write(h)
+            fp.write(h.decode("UTF-8", errors="hexreplace"))
 
-    def prettystr(self):
-        x = io.StringIO()
-        self.pretty(x)
-        return x.getvalue()
+    def prettystr(self) -> str:
+        return str(self)
 
-    def write(self, fp):
-        fp.write(''.join(self.header))
+    def __str__(self) -> str:
+        with io.StringIO() as s:
+            self.pretty(s)
+            return s.getvalue()
 
-    def allhunks(self):
+    def write(self, fp: IO[bytes]) -> None:
+        fp.write(b''.join(self.header))
+
+    def allhunks(self) -> bool:
         """
         Return True if the file which the header represents was changed
         completely (i.e.  there is no possibility of applying a hunk of changes
@@ -324,33 +349,35 @@ class Header(PatchNode):
             fromfile = None
         return [fromfile, tofile]
 
-    def filename(self):
+    def filename(self) -> str:
         files = self.files()
-        return files[1] or files[0]
+        return (files[1] or files[0]).decode("UTF-8", errors="hexreplace")
 
     def __repr__(self) -> str:
-        return '<header %s>' % (' '.join(map(repr, self.files())))
+        return '<header %s>' % (' '.join(
+            repr(x) for x in self.files()
+        ))
 
-    def special(self):
+    def special(self) -> bool:
         return any(self.special_re.match(h) for h in self.header)
 
     @property
-    def changetype(self):
+    def changetype(self) -> str:
         if self._changetype is None:
             self._changetype = "M"
             for h in self.header:
-                if h.startswith('new file'):
+                if h.startswith(b'new file'):
                     self._changetype = "A"
-                elif h.startswith('deleted file'):
+                elif h.startswith(b'deleted file'):
                     self._changetype = "D"
-                elif h.startswith('copy from'):
+                elif h.startswith(b'copy from'):
                     self._changetype = "C"
-                elif h.startswith('rename from'):
+                elif h.startswith(b'rename from'):
                     self._changetype = "R"
 
         return self._changetype
 
-    def nextsibling(self):
+    def nextsibling(self) -> Optional['Header']:
         numheadersinpatch = len(self.patch)
         indexofthisheader = self.patch.index(self)
 
@@ -360,7 +387,7 @@ class Header(PatchNode):
         else:
             return None
 
-    def prevsibling(self):
+    def prevsibling(self) -> Optional['Header']:
         indexofthisheader = self.patch.index(self)
         if indexofthisheader > 0:
             previousheader = self.patch[indexofthisheader - 1]
@@ -368,7 +395,7 @@ class Header(PatchNode):
         else:
             return None
 
-    def parentitem(self):
+    def parentitem(self) -> None:
         """
         There is no 'real' parent item of a header that can be selected,
         so return None.
@@ -389,7 +416,7 @@ class Header(PatchNode):
         else:
             return None
 
-    def allchildren(self):
+    def allchildren(self) -> Sequence['Hunk']:
         """Return a list of all direct children of this node"""
         return self.hunks
 
@@ -397,7 +424,7 @@ class Header(PatchNode):
 class HunkLine(PatchNode):
     """Represents a changed line in a hunk"""
 
-    def __init__(self, linetext, hunk):
+    def __init__(self, linetext: bytes, hunk):
         self.linetext = linetext
         self.applied = True
         # the parent hunk to which this line belongs
@@ -406,8 +433,21 @@ class HunkLine(PatchNode):
         # in the prevItem method.
         self.folded = False
 
-    def prettystr(self):
-        return self.linetext
+    def __bytes__(self):
+        if self.applied:
+            return self.linetext
+        else:
+            return b' ' + self.linetext[1:]
+
+    @property
+    def diffop(self):
+        return self.linetext[0:1]
+
+    def __str__(self) -> str:
+        return self.prettystr()
+
+    def prettystr(self) -> str:
+        return self.linetext.decode("UTF-8", errors="hexreplace")
 
     def nextsibling(self):
         numlinesinhunk = len(self.hunk.changedlines)
@@ -446,8 +486,24 @@ class HunkLine(PatchNode):
 class Hunk(PatchNode):
     """ui patch hunk, wraps a hunk and keeps track of ui behavior """
     maxcontext = 3
+    header: Header
+    fromline: int
+    toline: int
+    proc: bytes
+    after: Sequence[bytes]
+    before: Sequence[bytes]
+    changedlines: Sequence[HunkLine]
 
-    def __init__(self, header: Header, fromline, toline, proc, before, hunklines, after):
+    def __init__(
+            self,
+            header: Header,
+            fromline: int,
+            toline: int,
+            proc: bytes,
+            before: Sequence[bytes],
+            hunklines: Sequence[bytes],
+            after: Sequence[bytes]
+    ):
         def trimcontext(number, lines):
             delta = len(lines) - self.maxcontext
             if False and delta > 0:
@@ -509,25 +565,25 @@ class Hunk(PatchNode):
         else:
             return None
 
-    def allchildren(self) -> list[HunkLine]:
+    def allchildren(self) -> Sequence[PatchNode]:
         """Return a list of all direct children of this node"""
         return self.changedlines
 
     def countchanges(self) -> tuple[int, int]:
         """changedlines -> (n+,n-)"""
         add = len([line for line in self.changedlines if line.applied
-                   and line.prettystr().startswith('+')])
+                   and line.diffop == b'+'])
         rem = len([line for line in self.changedlines if line.applied
-                   and line.prettystr().startswith('-')])
+                   and line.diffop == b'-'])
         return add, rem
 
     def getfromtoline(self):
-        # calculate the number of removed lines converted to context lines
+        """Calculate the number of removed lines converted to context lines"""
         removedconvertedtocontext = self.originalremoved - self.removed
 
         contextlen = (len(self.before) + len(self.after) +
                       removedconvertedtocontext)
-        if self.after and self.after[-1] == '\\ No newline at end of file\n':
+        if self.after and self.after[-1] == b'\\ No newline at end of file\n':
             contextlen -= 1
         fromlen = contextlen + self.removed
         tolen = contextlen + self.added
@@ -539,75 +595,75 @@ class Hunk(PatchNode):
         # So, if either of hunks is empty, decrease its line start. --immerrr
         # But only do this if fromline > 0, to avoid having, e.g fromline=-1.
         fromline, toline = self.fromline, self.toline
-        if fromline != 0:
-            if fromlen == 0:
-                fromline -= 1
+        if fromlen == 0 and fromline > 0:
+            fromline -= 1
         if tolen == 0 and toline > 0:
             toline -= 1
 
-        fromtoline = '@@ -%d,%d +%d,%d @@%s\n' % (
+        fromtoline = b'@@ -%d,%d +%d,%d @@%b\n' % (
             fromline, fromlen, toline, tolen,
-            self.proc and (' ' + self.proc))
+            self.proc and (b' ' + self.proc))
+
         return fromtoline
 
-    def write(self, fp) -> None:
+    def write(self, fp: IO[bytes]) -> None:
         # updated self.added/removed, which are used by getfromtoline()
         self.added, self.removed = self.countchanges()
         fp.write(self.getfromtoline())
+        fp.write(b''.join(self.before))
 
-        hunklinelist = []
         # add the following to the list: (1) all applied lines, and
         # (2) all unapplied removal lines (convert these to context lines)
         for changedline in self.changedlines:
-            changedlinestr = changedline.prettystr()
-            if changedline.applied:
-                hunklinelist.append(changedlinestr)
-            elif changedlinestr.startswith("-"):
-                hunklinelist.append(" " + changedlinestr[1:])
+            fp.write(bytes(changedline))
 
-        fp.write(''.join(self.before + hunklinelist + self.after))
+        fp.write(b''.join(self.after))
 
     def reversehunks(self) -> 'Hunk':
-        """Make the hunk apply in the other direction."""
-        m = {'+': '-', '-': '+', '\\': '\\'}
-        hunklines = ['%s%s' % (m[line.prettystr()[0:1]], line.prettystr()[1:])
+        r"""Make the hunk apply in the other direction.
+
+        >>> header = Header([b'diff --git a/file b/file\n'])
+        >>> print(Hunk(
+        ...     header,
+        ...     fromline=1,
+        ...     toline=2,
+        ...     proc=b'context',
+        ...     before=[b' 1\n', b' 2\n'],
+        ...     hunklines=[b'-3\n'],
+        ...     after=[b' 4\n', b' 5\n'],
+        ... ).reversehunks().prettystr())
+        @@ -1,4 +2,5 @@ context
+         1
+         2
+        +3
+         4
+         5
+        """
+        m = {b'+': b'-', b'-': b'+', b'\\': b'\\'}
+        hunklines = [b'%s%s' % (m[line.linetext[0:1]], line.linetext[1:])
                      for line in self.changedlines if line.applied]
         return Hunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklines, self.after)
 
-    def unapplyhunks(self) -> 'Hunk':
-        """Unapply the hunk.
+    def files(self) -> list[Optional[bytes]]:
+        return self.header.files()
 
-        If the hunk is not applied, then the hunk is returned as it appears in the patch file.
-        If the hunk is applied, then the hunk is returned with the '+' lines changed to ' ' lines
-
-        :return: A new Hunk object with the changes applied.
-        """
-        m = {'+': '-', '-': '+', '\\': '\\'}
-        hunklinelist = []
-        for changedline in self.changedlines:
-            changedlinestr = changedline.prettystr()
-            if not changedline.applied:
-                hunklinelist.append('%s%s' % (m[changedlinestr[0]], changedlinestr[1:]))
-            elif changedlinestr.startswith("+"):
-                hunklinelist.append(" " + changedlinestr[1:])
-        return Hunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklinelist, self.after)
-
-    pretty = write
-
-    def filename(self):
+    def filename(self) -> str:
         return self.header.filename()
 
+    def __str__(self) -> str:
+        return self.prettystr()
+
     def prettystr(self) -> str:
-        x = io.StringIO()
-        self.pretty(x)
-        return x.getvalue()
+        x = io.BytesIO()
+        self.write(x)
+        return x.getvalue().decode("UTF-8", errors="hexreplace")
 
     def __repr__(self) -> str:
-        return '<hunk %r@%d>' % (self.filename(), self.fromline)
+        return '<hunk %r@%d>' % (self.files()[1] or self.files()[0], self.fromline)
 
 
 def parsepatch(fp: IO[bytes]):
-    """Parse a patch, returning a list of header and hunk objects.
+    r"""Parse a patch, returning a list of header and hunk objects.
 
     >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
     ... --- a/folder1/g
@@ -630,20 +686,23 @@ def parsepatch(fp: IO[bytes]):
     Headers and hunks are interspersed in the list returned from
     the function:
     >>> headers
-    [<header 'folder1/g' 'folder1/g'>,
-     <hunk 'folder1/g'@1>,
-     <hunk 'folder1/g'@7>,
-     <hunk 'folder1/g'@9>]
+    [<header b'folder1/g' b'folder1/g'>,
+     <hunk b'folder1/g'@1>,
+     <hunk b'folder1/g'@7>,
+     <hunk b'folder1/g'@9>]
+
+    >>> headers[0].filename()
+    'folder1/g'
 
     Each header also provides a list of hunks belonging to it:
     >>> headers[0].hunks
-    [<hunk 'folder1/g'@1>,
-     <hunk 'folder1/g'@7>,
-     <hunk 'folder1/g'@9>]
-    >>> out = io.StringIO()
+    [<hunk b'folder1/g'@1>,
+     <hunk b'folder1/g'@7>,
+     <hunk b'folder1/g'@9>]
+    >>> out = io.BytesIO()
     >>> for header in headers:
     ...     header.write(out)
-    >>> print(out.getvalue())
+    >>> print(out.getvalue().decode("ascii"))
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
@@ -661,23 +720,54 @@ def parsepatch(fp: IO[bytes]):
      8
     @@ -8,0 +10,1 @@
     +9
+
+    It is possible to handle non-UTF-8 patches:
+    >>> rawpatch = b'''diff --git a/test b/test
+    ... --- /dev/null
+    ... +++ b/test
+    ... @@ -0,0 +1,2 @@
+    ... +\xCD\xCE\xCD-\xD3\xD2\xD4-8 \xF2\xE5\xF1\xF2
+    ... +test'''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> headers = parsepatch(fp)
+    >>> out = io.BytesIO()
+    >>> for header in headers:
+    ...     header.write(out)
+
+    Non-UTF-8 characters survive the roundtrip:
+    >>> print(out.getvalue().decode("cp1251"))
+    diff --git a/test b/test
+    --- /dev/null
+    +++ b/test
+    @@ -0,0 +1,2 @@
+    +НОН-УТФ-8 тест
+    +test
+
+    When pretty-printing the hunk, they get replaced with their
+    hexadecimal codes:
+    >>> print(headers[0].hunks[0])
+    @@ -0,0 +1,2 @@
+    +<CD><CE><CD>-<D3><D2><D4>-8 <F2><E5><F1><F2>
+    +test
     """
 
     class Parser:
         """patch parsing state machine"""
 
+        header: Header
+        headers: Sequence[Union[Header, Hunk]]
+
         def __init__(self):
             self.fromline = 0
             self.toline = 0
-            self.proc = ''
-            self.header = None
+            self.proc = b''
             self.context = []
             self.before = []
             self.hunk = []
             self.headers = []
 
         def addrange(self, limits):
-            "Store range line info to associated instance variables."
+            """Store range line info to associated instance variables."""
             fromstart, fromend, tostart, toend, proc = limits
             self.fromline = int(fromstart)
             self.toline = int(tostart)
@@ -707,7 +797,7 @@ def parsepatch(fp: IO[bytes]):
             self.before = []
             self.hunk = []
             self.context = []
-            self.proc = ''
+            self.proc = b''
 
         def addcontext(self, context):
             """
@@ -738,7 +828,7 @@ def parsepatch(fp: IO[bytes]):
             self.before = self.context
             self.context = []
 
-        def newfile(self, hdr):
+        def newfile(self, header):
             """
             Create a header object containing the header lines, and the
             filename the header applies to.  Add the header to self.headers.
@@ -750,7 +840,7 @@ def parsepatch(fp: IO[bytes]):
                 self.add_new_hunk()
 
             # create a new header and add it to self.header
-            h = Header(hdr)
+            h = Header(header)
             self.headers.append(h)
             self.header = h
 

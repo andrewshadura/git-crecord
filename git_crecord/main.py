@@ -10,7 +10,11 @@ import argparse
 class Config:
     def get(self, section, item, default=None):
         try:
-            return util.systemcall(['git', 'config', '--get', '%s.%s' % (section, item)], onerr=KeyError).rstrip('\n')
+            return util.systemcall(
+                ['git', 'config', '--get', '%s.%s' % (section, item)],
+                onerr=KeyError,
+                encoding="UTF-8",
+            ).rstrip('\n')
         except KeyError:
             return default
 
@@ -27,29 +31,25 @@ class Ui:
         except KeyError:
             self._username = None
 
-    def debug(self, *msg, **opts):
-        if self.debuglevel < 2:
+    def print_message(self, *msg, debuglevel: int, **opts):
+        if self.debuglevel < debuglevel:
             return
-        for m in msg:
-            sys.stdout.write(m)
+
+        sys.stdout.flush()
+        print(*msg, **opts, file=sys.stderr)
+        sys.stderr.flush()
+
+    def debug(self, *msg, **opts):
+        self.print_message(*msg, debuglevel=2, **opts)
 
     def info(self, *msg, **opts):
-        if self.debuglevel < 1:
-            return
-        sys.stdout.flush()
-        for m in msg:
-            sys.stderr.write(m)
-        sys.stderr.flush()
-
-    def status(self, *msg, **opts):
-        for m in msg:
-            sys.stdout.write(m)
+        self.print_message(*msg, debuglevel=1, **opts)
 
     def warn(self, *msg, **opts):
-        sys.stdout.flush()
-        for m in msg:
-            sys.stderr.write(m)
-        sys.stderr.flush()
+        self.print_message(*msg, debuglevel=0, **opts)
+
+    def status(self, *msg, **opts):
+        print(*msg, **opts)
 
     def setdebuglevel(self, level):
         self.debuglevel = level
@@ -69,16 +69,16 @@ class Ui:
                 os.environ.get("VISUAL") or
                 os.environ.get("EDITOR", editor))
 
-    def edit(self, text, user, extra=None, name=None):
+    def edit(self, text: bytes, user, extra=None, name=None) -> bytes:
         fd = None
         if name is None:
             (fd, name) = tempfile.mkstemp(prefix='git-crecord-',
                                       suffix=".txt", text=True)
         try:
             if fd is not None:
-                f = os.fdopen(fd, "w")
+                f = os.fdopen(fd, "wb")
             else:
-                f = open(name, "w")
+                f = open(name, "wb")
             f.write(text)
             f.close()
 
@@ -87,7 +87,7 @@ class Ui:
             util.system("%s \"%s\"" % (editor, name),
                        onerr=util.Abort, errprefix=_("edit failed"))
 
-            f = open(name)
+            f = open(name, "rb")
             t = f.read()
             f.close()
         finally:
