@@ -1,14 +1,16 @@
 from gettext import gettext as _
-from .gitrepo import GitRepo
+from typing import Optional
+
 import os
 import sys
 from . import crecord_core
 from . import util
+from .gitrepo import GitRepo
 import tempfile
 import argparse
 
 class Config:
-    def get(self, section, item, default=None):
+    def get(self, section, item, default=None) -> Optional[str]:
         try:
             return util.systemcall(
                 ['git', 'config', '--get', '%s.%s' % (section, item)],
@@ -22,7 +24,7 @@ class Config:
         raise NotImplementedError
 
 class Ui:
-    def __init__(self, repo):
+    def __init__(self, repo: GitRepo):
         self.repo = repo
         self.config = Config()
         self.debuglevel = 0
@@ -108,14 +110,8 @@ class Ui:
         try:
             args = []
 
-            # git-commit doesn't play nice with empty lines
-            # and comments in the commit message when --edit
-            # is used with --file;
-            # to work that around, use --template when
-            # no message is specified and --file otherwise.
-
             f = os.fdopen(fd, "w")
-            if opts['message'] is not None:
+            if opts['message']:
                 f.write(opts['message'])
             f.close()
 
@@ -138,7 +134,7 @@ class Ui:
             if to_add:
                 util.system(['git', 'add', '-f', '-N', '--'] + to_add,
                            onerr=util.Abort, errprefix=_("add failed"))
-            if opts['message'] is None:
+            if not opts['message']:
                 util.system(['git', 'commit'] + args + ['--'] + list(files),
                            onerr=util.Abort, errprefix=_("commit failed"))
             else:
