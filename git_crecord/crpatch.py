@@ -174,33 +174,39 @@ class PatchNode:
             itemfolded = False
         if skipfolded and itemfolded:
             nextitem = self.nextsibling()
-            if nextitem is None:
-                try:
-                    nextitem = self.parentitem().nextsibling()
-                except AttributeError:
+            if not nextitem:
+                parent = self.parentitem()
+                if parent:
+                    nextitem = parent.nextsibling()
+                else:
                     nextitem = None
             return nextitem
         else:
             # try child
             item = self.firstchild()
-            if item is not None:
+            if item:
                 return item
 
             # else try next sibling
             item = self.nextsibling()
-            if item is not None:
+            if item:
                 return item
 
-            try:
+            parent = self.parentitem()
+            if parent:
                 # else try parent's next sibling
-                item = self.parentitem().nextsibling()
-                if item is not None:
+                item = parent.nextsibling()
+                if item:
                     return item
 
                 # else return grandparent's next sibling (or None)
-                return self.parentitem().parentitem().nextsibling()
+                grandparent = parent.parentitem()
+                if grandparent:
+                    return grandparent.nextsibling()
+                else:
+                    return None
 
-            except AttributeError:  # parent and/or grandparent was None
+            else:  # parent and/or grandparent was None
                 return None
 
     def previtem(self) -> Optional['PatchNode']:
