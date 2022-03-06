@@ -120,7 +120,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                                dir=backupdir)
                 os.close(fd)
                 ui.debug('backup %r as %r' % (f, tmpname))
-                pathname = os.path.join(repo.path, f)
+                pathname = repo.path / f
                 if os.path.isfile(pathname):
                     copyfile(pathname, tmpname)
                 if f in modified:

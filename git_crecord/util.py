@@ -8,16 +8,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version
 
-from __future__ import unicode_literals
-
 from gettext import gettext as _
 import os
 import subprocess
 import shutil
 import sys
-from typing import AnyStr, overload, Sequence, Optional
+from pathlib import Path
+from typing import AnyStr, overload, Sequence, Optional, Union
 
-from . import encoding
+from .encoding import ucolwidth
 
 
 closefds = os.name == 'posix'
@@ -109,26 +108,17 @@ def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
         return out
 
 
-def copyfile(src, dest, hardlink=False, copystat=False):
-    '''copy a file, preserving mode and optionally other stat info like
-    atime/mtime'''
+def copyfile(src: Union[str, Path], dest: Union[str, Path], copystat=True):
+    """Copy a file, preserving mode and optionally other stat info like atime/mtime"""
     if os.path.lexists(dest):
         os.unlink(dest)
-    # hardlinks are problematic on CIFS, quietly ignore this flag
-    # until we find a way to work around it cleanly (issue4546)
-    if False and hardlink:
-        try:
-            os.link(src, dest)
-            return
-        except (IOError, OSError):
-            pass # fall back to normal copy
     if os.path.islink(src):
         os.symlink(os.readlink(src), dest)
         # copytime is ignored for symlinks, but in general copytime isn't needed
         # for them anyway
     else:
         try:
-            shutil.copyfile(src, dest)
+            shutil.copyfile(src, dest)  # type: ignore
             if copystat:
                 # copystat also copies mode
                 shutil.copystat(src, dest)
@@ -140,7 +130,70 @@ def copyfile(src, dest, hardlink=False, copystat=False):
 
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) columns in display."""
-    return encoding.trim(text, maxlength, ellipsis='...')
+    return trim(text, maxlength, ellipsis='...')
+
+
+def trim(s, width, ellipsis='', leftside=False):
+    """Trim string 's' to at most 'width' columns (including 'ellipsis').
+
+    If 'leftside' is True, left side of string 's' is trimmed.
+    'ellipsis' is always placed at trimmed side.
+
+    >>> ellipsis = '+++'
+    >>> encoding = 'utf-8'
+    >>> t = '1234567890'
+    >>> print(trim(t, 12, ellipsis=ellipsis))
+    1234567890
+    >>> print(trim(t, 10, ellipsis=ellipsis))
+    1234567890
+    >>> print(trim(t, 8, ellipsis=ellipsis))
+    12345+++
+    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    +++67890
+    >>> print(trim(t, 8))
+    12345678
+    >>> print(trim(t, 8, leftside=True))
+    34567890
+    >>> print(trim(t, 3, ellipsis=ellipsis))
+    +++
+    >>> print(trim(t, 1, ellipsis=ellipsis))
+    +
+    >>> t = '\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
+    >>> print(trim(t, 12, ellipsis=ellipsis))
+    \u3042\u3044\u3046\u3048\u304a
+    >>> print(trim(t, 10, ellipsis=ellipsis))
+    \u3042\u3044\u3046\u3048\u304a
+    >>> print(trim(t, 8, ellipsis=ellipsis))
+    \u3042\u3044+++
+    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    +++\u3048\u304a
+    >>> print(trim(t, 5))
+    \u3042\u3044
+    >>> print(trim(t, 5, leftside=True))
+    \u3048\u304a
+    >>> print(trim(t, 4, ellipsis=ellipsis))
+    +++
+    >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
+    +++
+    """
+    if ucolwidth(s) <= width:  # trimming is not needed
+        return s
+
+    width -= len(ellipsis)
+    if width <= 0:  # no enough room even for ellipsis
+        return ellipsis[:width + len(ellipsis)]
+
+    if leftside:
+        uslice = lambda i: s[i:]
+        concat = lambda s: ellipsis + s
+    else:
+        uslice = lambda i: s[:-i]
+        concat = lambda s: s + ellipsis
+    for i in range(1, len(s)):
+        usub = uslice(i)
+        if ucolwidth(usub) <= width:
+            return concat(usub)
+    return ellipsis  # no enough room for multi-column characters
 
 
 _notset = object()

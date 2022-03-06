@@ -4,7 +4,6 @@ from gettext import gettext as _
 from . import util
 
 from . import encoding
-code = encoding.encoding
 
 import os
 import re
