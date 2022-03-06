@@ -1020,20 +1020,6 @@ The following are valid keystrokes:
         except curses.error:
             pass
 
-    def commitmessagewindow(self, commenttext):
-        "Create a temporary commit message editing window on the screen."
-            
-        curses.raw()
-        curses.def_prog_mode()
-        curses.endwin()
-        commenttext = self.ui.edit(commenttext, self.ui.username,
-                                   name=os.path.join(self.ui.repo.controldir,
-                                                     'COMMIT_EDITMSG'))
-        curses.cbreak()
-        self.stdscr.refresh()
-        self.stdscr.keypad(1) # allow arrow-keys to continue to function
-        return commenttext
-
     def confirmationwindow(self, windowtext):
         "Display an informational window, then wait for and return a keypress."
 
