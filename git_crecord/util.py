@@ -201,3 +201,40 @@ _notset = object()
 
 def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
+
+
+def unescape_filename(filename: bytes) -> bytes:
+    r"""Unescape a filename after Git mangled it for "git diff --git" line.
+
+    >>> unescape_filename(b'a/\\321\\216\\321\\217')
+    b'a/\xd1\x8e\xd1\x8f'
+    >>> unescape_filename(b'a/\\\\')
+    b'a/\\'
+    >>> unescape_filename(b'a/file\\55name')
+    b'a/file-name'
+    """
+    unescaped_unicode = filename.decode('unicode_escape')
+    return bytes(ord(x) for x in unescaped_unicode)
+
+
+def unwrap_filename(filename: bytes) -> bytes:
+    r"""Unwrap a filename mangled by Git
+
+    If the filename is in double quotes, remove them and unescape enclosed characters.
+    Otherwise, return the input as is.
+
+    >>> def apply(f, s: str) -> str:
+    ...     return f(s.encode("UTF-8")).decode("UTF-8")
+    >>> apply(unwrap_filename, 'a/filename')
+    'a/filename'
+    >>> apply(unwrap_filename, 'a/имя-файла')
+    'a/имя-файла'
+    >>> apply(unwrap_filename, '"a/file\\55name"')
+    'a/file-name'
+    >>> apply(unwrap_filename, '"a/им\\321\\217\55\\\\name"')
+    'a/имя-\\name'
+    """
+    if filename.startswith(b'"') and filename.endswith(b'"'):
+        return unescape_filename(filename[1:-1])
+    else:
+        return filename

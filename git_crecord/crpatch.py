@@ -9,6 +9,8 @@ from codecs import register_error
 
 from typing import IO, Iterator, Optional, Sequence, Union
 
+from .util import unwrap_filename
+
 lines_re = re.compile(b'@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@\\s*(.*)')
 
 
@@ -106,7 +108,7 @@ def scanpatch(fp: IO[bytes]):
         return lines
 
     for line in iter(lr.readline, b''):
-        if line.startswith(b'diff --git a/'):
+        if line.startswith(b'diff --git a/') or line.startswith(b'diff --git "a/'):
             def notheader(line: bytes) -> bool:
                 s = line.split(None, 1)
                 return not s or s[0] not in (b'---', b'diff')
@@ -263,7 +265,7 @@ class PatchNode:
 
 class Header(PatchNode):
     """Patch header"""
-    diff_re = re.compile(b'diff --git a/(.*) b/(.*)$')
+    diff_re = re.compile(b'diff --git (?P<fromfile>(?P<aq>")?a/.*(?(aq)"|)) (?P<tofile>(?P<bq>")?b/.*(?(bq)"|))$')
     allhunks_re = re.compile(b'(?:GIT binary patch|new file|deleted file) ')
     pretty_re = re.compile(b'(?:new file|deleted file) ')
     special_re = re.compile(b'(?:GIT binary patch|new|deleted|copy|rename) ')
@@ -331,7 +333,9 @@ class Header(PatchNode):
         return any(self.allhunks_re.match(h) for h in self.header)
 
     def files(self):
-        fromfile, tofile = self.diff_re.match(self.header[0]).groups()
+        fromfile, tofile = self.diff_re.match(self.header[0]).group('fromfile', 'tofile')
+        fromfile = unwrap_filename(fromfile).removeprefix(b'a/')
+        tofile = unwrap_filename(tofile).removeprefix(b'b/')
         if self.changetype == 'D':
             tofile = None
         elif self.changetype == 'A':
@@ -757,6 +761,22 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
     @@ -0,0 +1,2 @@
     +<CD><CE><CD>-<D3><D2><D4>-8 <F2><E5><F1><F2>
     +test
+
+    Quoted filenames in the diff headers are supported too:
+    >>> rawpatch = b'''diff --git "a/test- \\\\\\321\\217\\321\\217" "b/test- \\\\\\321\\217\\321\\217"
+    ... new file mode 100644
+    ... index 000000000000..7f53c853ca78
+    ... --- /dev/null
+    ... +++ "b/test- \\\\\\321\\217\\321\\217"
+    ... @@ -0,0 +1,2 @@
+    ... +\xCD\xCE\xCD-\xD3\xD2\xD4-8 \xF2\xE5\xF1\xF2
+    ... +test'''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> patch = parsepatch(fp)
+    >>> files = patch.headers[0].files()
+    >>> files[0]
+    >>> files[1].decode('UTF-8')
+    'test- \\яя'
     """
 
     class Parser:
