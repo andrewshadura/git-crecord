@@ -6,32 +6,35 @@ from gettext import gettext as _
 import io
 import re
 
-from typing import IO
+from typing import IO, Iterator, Optional
+
+lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
+
 
 class PatchError(Exception):
     pass
 
-lines_re = re.compile(r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@\s*(.*)')
 
-class linereader:
+class LineReader:
     # simple class to allow pushing lines back into the input stream
     def __init__(self, fp: IO[bytes]):
         self.fp = fp
-        self.buf = []
+        self.buf: list[str] = []
 
-    def push(self, line) -> None:
+    def push(self, line: str) -> None:
         if line is not None:
             self.buf.append(line)
 
     def readline(self) -> str:
         if self.buf:
-            l = self.buf[0]
+            line = self.buf[0]
             del self.buf[0]
-            return l
+            return line
         return self.fp.readline().decode('UTF-8')
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self.readline, '')
+
 
 def scanpatch(fp: IO[bytes]):
     r"""Read a patch and yield the following events:
@@ -77,9 +80,9 @@ def scanpatch(fp: IO[bytes]):
      ('hunk',
         ['+9'])]
     """
-    lr = linereader(fp)
+    lr = LineReader(fp)
 
-    def scanwhile(first, p):
+    def scanwhile(first, p) -> list[str]:
         """scan lr while predicate holds"""
         lines = [first]
         for line in iter(lr.readline, ''):
@@ -92,9 +95,10 @@ def scanpatch(fp: IO[bytes]):
 
     for line in iter(lr.readline, ''):
         if line.startswith('diff --git a/'):
-            def notheader(line):
+            def notheader(line: str) -> bool:
                 s = line.split(None, 1)
                 return not s or s[0] not in ('---', 'diff')
+
             header = scanwhile(line, notheader)
             fromfile = lr.readline()
             if fromfile.startswith('---'):
@@ -114,10 +118,14 @@ def scanpatch(fp: IO[bytes]):
             else:
                 raise PatchError('unknown patch content: %r' % line)
 
-class patchnode:
+
+class PatchNode:
     """Abstract Class for Patch Graph Nodes
     (i.e. PatchRoot, header, hunk, HunkLine)
     """
+
+    folded: bool = False
+    patch: 'PatchRoot'
 
     def firstchild(self):
         raise NotImplementedError("method must be implemented by subclass")
@@ -125,11 +133,11 @@ class patchnode:
     def lastchild(self):
         raise NotImplementedError("method must be implemented by subclass")
 
-    def allchildren(self):
-        "Return a list of all of the direct children of this node"
+    def allchildren(self) -> list['PatchNode']:
+        """Return a list of all direct children of this node"""
         raise NotImplementedError("method must be implemented by subclass")
 
-    def nextsibling(self):
+    def nextsibling(self) -> Optional['PatchNode']:
         """
         Return the closest next item of the same type where there are no items
         of different types between the current item and this closest item.
@@ -137,7 +145,7 @@ class patchnode:
         """
         raise NotImplementedError("method must be implemented by subclass")
 
-    def prevsibling(self):
+    def prevsibling(self) -> Optional['PatchNode']:
         """
         Return the closest previous item of the same type where there are no
         items of different types between the current item and this closest item.
@@ -145,10 +153,11 @@ class patchnode:
         """
         raise NotImplementedError("method must be implemented by subclass")
 
-    def parentitem(self):
+    def parentitem(self) -> Optional['PatchNode']:
+        """Return the parent to the current item"""
         raise NotImplementedError("method must be implemented by subclass")
 
-    def nextitem(self, skipfolded=True):
+    def nextitem(self, skipfolded=True) -> Optional['PatchNode']:
         """
         Try to return the next item closest to this item, regardless of item's
         type (header, hunk, or hunkline).
@@ -191,10 +200,10 @@ class patchnode:
                 # else return grandparent's next sibling (or None)
                 return self.parentitem().parentitem().nextsibling()
 
-            except AttributeError: # parent and/or grandparent was None
+            except AttributeError:  # parent and/or grandparent was None
                 return None
 
-    def previtem(self):
+    def previtem(self) -> Optional['PatchNode']:
         """
         Try to return the previous item closest to this item, regardless of
         item's type (header, hunk, or hunkline).
@@ -207,10 +216,10 @@ class patchnode:
         if prevsibling is not None:
             prevsiblinglastchild = prevsibling.lastchild()
             if ((prevsiblinglastchild is not None) and
-                not prevsibling.folded):
+                    not prevsibling.folded):
                 prevsiblinglclc = prevsiblinglastchild.lastchild()
                 if ((prevsiblinglclc is not None) and
-                    not prevsiblinglastchild.folded):
+                        not prevsiblinglastchild.folded):
                     return prevsiblinglclc
                 else:
                     return prevsiblinglastchild
@@ -220,22 +229,20 @@ class patchnode:
         # try parent (or None)
         return self.parentitem()
 
-class patch(patchnode, list): # TODO: rename PatchRoot
-    """
-    List of header objects representing the patch.
 
-    """
+class PatchRoot(PatchNode, list):
+    """List of header objects representing the patch."""
+
     def __init__(self, headerlist):
+        super().__init__()
         self.extend(headerlist)
         # add parent patch object reference to each header
         for header in self:
             header.patch = self
 
-class uiheader(patchnode):
-    """patch header
 
-    XXX shoudn't we move this to mercurial/patch.py ?
-    """
+class Header(PatchNode):
+    """Patch header"""
     diff_re = re.compile('diff --git a/(.*) b/(.*)$')
     allhunks_re = re.compile('(?:GIT binary patch|new file|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
@@ -299,8 +306,7 @@ class uiheader(patchnode):
         """
         Return True if the file which the header represents was changed
         completely (i.e.  there is no possibility of applying a hunk of changes
-        smaller than the size of the entire file.)  Otherwise return False
-
+        smaller than the size of the entire file.)  Otherwise, return False
         """
         return any(self.allhunks_re.match(h) for h in self.header)
 
@@ -316,7 +322,7 @@ class uiheader(patchnode):
         files = self.files()
         return files[1] or files[0]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<header %s>' % (' '.join(map(repr, self.files())))
 
     def special(self):
@@ -364,25 +370,27 @@ class uiheader(patchnode):
         return None
 
     def firstchild(self):
-        "Return the first child of this item, if one exists.  Otherwise None."
+        """Return the first child of this item, if one exists.  Otherwise, None."""
         if len(self.hunks) > 0:
             return self.hunks[0]
         else:
             return None
 
     def lastchild(self):
-        "Return the last child of this item, if one exists.  Otherwise None."
+        """Return the last child of this item, if one exists.  Otherwise, None."""
         if len(self.hunks) > 0:
             return self.hunks[-1]
         else:
             return None
 
     def allchildren(self):
-        "Return a list of all of the direct children of this node"
+        """Return a list of all direct children of this node"""
         return self.hunks
 
-class uihunkline(patchnode):
-    "Represents a changed line in a hunk"
+
+class HunkLine(PatchNode):
+    """Represents a changed line in a hunk"""
+
     def __init__(self, linetext, hunk):
         self.linetext = linetext
         self.applied = True
@@ -399,13 +407,14 @@ class uihunkline(patchnode):
         numlinesinhunk = len(self.hunk.changedlines)
         indexofthisline = self.hunk.changedlines.index(self)
 
-        if (indexofthisline < numlinesinhunk - 1):
+        if indexofthisline < numlinesinhunk - 1:
             nextline = self.hunk.changedlines[indexofthisline + 1]
             return nextline
         else:
             return None
 
     def prevsibling(self):
+        """Return the previous line in the hunk"""
         indexofthisline = self.hunk.changedlines.index(self)
         if indexofthisline > 0:
             previousline = self.hunk.changedlines[indexofthisline - 1]
@@ -414,24 +423,25 @@ class uihunkline(patchnode):
             return None
 
     def parentitem(self):
-        "Return the parent to the current item"
+        """Return the parent to the current item"""
         return self.hunk
 
     def firstchild(self):
-        "Return the first child of this item, if one exists.  Otherwise None."
+        """Return the first child of this item, if one exists.  Otherwise, None."""
         # hunk-lines don't have children
         return None
 
     def lastchild(self):
-        "Return the last child of this item, if one exists.  Otherwise None."
+        """Return the last child of this item, if one exists.  Otherwise, None."""
         # hunk-lines don't have children
         return None
 
-class uihunk(patchnode):
-    """ui patch hunk, wraps a hunk and keep track of ui behavior """
+
+class Hunk(PatchNode):
+    """ui patch hunk, wraps a hunk and keeps track of ui behavior """
     maxcontext = 3
 
-    def __init__(self, header, fromline, toline, proc, before, hunk, after):
+    def __init__(self, header: Header, fromline, toline, proc, before, hunklines, after):
         def trimcontext(number, lines):
             delta = len(lines) - self.maxcontext
             if False and delta > 0:
@@ -442,7 +452,7 @@ class uihunk(patchnode):
         self.fromline, self.before = trimcontext(fromline, before)
         self.toline, self.after = trimcontext(toline, after)
         self.proc = proc
-        self.changedlines = [uihunkline(line, self) for line in hunk]
+        self.changedlines = [HunkLine(line, self) for line in hunklines]
         self.added, self.removed = self.countchanges()
         # used at end for detecting how many removed lines were un-applied
         self.originalremoved = self.removed
@@ -455,17 +465,19 @@ class uihunk(patchnode):
         # children are partially applied (i.e. some applied, some not).
         self.partial = False
 
-    def nextsibling(self):
+    def nextsibling(self) -> Optional['Hunk']:
+        """Return the next hunk in the group."""
         numhunksinheader = len(self.header.hunks)
         indexofthishunk = self.header.hunks.index(self)
 
-        if (indexofthishunk < numhunksinheader - 1):
+        if indexofthishunk < numhunksinheader - 1:
             nexthunk = self.header.hunks[indexofthishunk + 1]
             return nexthunk
         else:
             return None
 
-    def prevsibling(self):
+    def prevsibling(self) -> Optional['Hunk']:
+        """Return the previous hunk in the group."""
         indexofthishunk = self.header.hunks.index(self)
         if indexofthishunk > 0:
             previoushunk = self.header.hunks[indexofthishunk - 1]
@@ -473,34 +485,34 @@ class uihunk(patchnode):
         else:
             return None
 
-    def parentitem(self):
-        "Return the parent to the current item"
+    def parentitem(self) -> Header:
+        """Return the header for this hunk"""
         return self.header
 
-    def firstchild(self):
-        "Return the first child of this item, if one exists.  Otherwise None."
+    def firstchild(self) -> Optional[HunkLine]:
+        """Return the first hunk line of this hunk, if one exists.  Otherwise, None."""
         if len(self.changedlines) > 0:
             return self.changedlines[0]
         else:
             return None
 
-    def lastchild(self):
-        "Return the last child of this item, if one exists.  Otherwise None."
+    def lastchild(self) -> Optional[HunkLine]:
+        """Return the last child of this item, if one exists.  Otherwise, None."""
         if len(self.changedlines) > 0:
             return self.changedlines[-1]
         else:
             return None
 
-    def allchildren(self):
-        "Return a list of all of the direct children of this node"
+    def allchildren(self) -> list[HunkLine]:
+        """Return a list of all direct children of this node"""
         return self.changedlines
 
-    def countchanges(self):
+    def countchanges(self) -> tuple[int, int]:
         """changedlines -> (n+,n-)"""
-        add = len([l for l in self.changedlines if l.applied
-                   and l.prettystr().startswith('+')])
-        rem = len([l for l in self.changedlines if l.applied
-                   and l.prettystr().startswith('-')])
+        add = len([line for line in self.changedlines if line.applied
+                   and line.prettystr().startswith('+')])
+        rem = len([line for line in self.changedlines if line.applied
+                   and line.prettystr().startswith('-')])
         return add, rem
 
     def getfromtoline(self):
@@ -532,7 +544,7 @@ class uihunk(patchnode):
             self.proc and (' ' + self.proc))
         return fromtoline
 
-    def write(self, fp):
+    def write(self, fp) -> None:
         # updated self.added/removed, which are used by getfromtoline()
         self.added, self.removed = self.countchanges()
         fp.write(self.getfromtoline())
@@ -549,36 +561,43 @@ class uihunk(patchnode):
 
         fp.write(''.join(self.before + hunklinelist + self.after))
 
-    def reversehunks(self):
-       m = {'+': '-', '-': '+', '\\': '\\'}
-       hunk = ['%s%s' % (m[l.prettystr()[0:1]], l.prettystr()[1:]) for l in self.changedlines if l.applied]
-       return uihunk(self.header, self.fromline, self.toline, self.proc, self.before, hunk, self.after)
+    def reversehunks(self) -> 'Hunk':
+        """Make the hunk apply in the other direction."""
+        m = {'+': '-', '-': '+', '\\': '\\'}
+        hunklines = ['%s%s' % (m[line.prettystr()[0:1]], line.prettystr()[1:])
+                     for line in self.changedlines if line.applied]
+        return Hunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklines, self.after)
 
-    def unapplyhunks(self):
+    def unapplyhunks(self) -> 'Hunk':
+        """Unapply the hunk.
+
+        If the hunk is not applied, then the hunk is returned as it appears in the patch file.
+        If the hunk is applied, then the hunk is returned with the '+' lines changed to ' ' lines
+
+        :return: A new Hunk object with the changes applied.
+        """
         m = {'+': '-', '-': '+', '\\': '\\'}
         hunklinelist = []
         for changedline in self.changedlines:
-           changedlinestr = changedline.prettystr()
-           if not changedline.applied:
-               hunklinelist.append('%s%s' % (m[changedlinestr[0]], changedlinestr[1:]))
-           elif changedlinestr.startswith("+"):
-               hunklinelist.append(" " + changedlinestr[1:])
-        return uihunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklinelist, self.after)
-
+            changedlinestr = changedline.prettystr()
+            if not changedline.applied:
+                hunklinelist.append('%s%s' % (m[changedlinestr[0]], changedlinestr[1:]))
+            elif changedlinestr.startswith("+"):
+                hunklinelist.append(" " + changedlinestr[1:])
+        return Hunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklinelist, self.after)
 
     pretty = write
 
     def filename(self):
         return self.header.filename()
 
-    def prettystr(self):
+    def prettystr(self) -> str:
         x = io.StringIO()
         self.pretty(x)
         return x.getvalue()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
-
 
 
 def parsepatch(fp: IO[bytes]):
@@ -638,8 +657,9 @@ def parsepatch(fp: IO[bytes]):
     +9
     """
 
-    class parser:
+    class Parser:
         """patch parsing state machine"""
+
         def __init__(self):
             self.fromline = 0
             self.toline = 0
@@ -672,8 +692,8 @@ def parsepatch(fp: IO[bytes]):
             next hunk we parse.
 
             """
-            h = uihunk(self.header, self.fromline, self.toline, self.proc,
-                       self.before, self.hunk, self.context)
+            h = Hunk(self.header, self.fromline, self.toline, self.proc,
+                     self.before, self.hunk, self.context)
             self.header.hunks.append(h)
             self.headers.append(h)
             self.fromline += len(self.before) + h.removed + len(self.context)
@@ -724,7 +744,7 @@ def parsepatch(fp: IO[bytes]):
                 self.add_new_hunk()
 
             # create a new header and add it to self.header
-            h = uiheader(hdr)
+            h = Header(hdr)
             self.headers.append(h)
             self.header = h
 
@@ -749,9 +769,9 @@ def parsepatch(fp: IO[bytes]):
                      'range': addrange},
             'range': {'context': addcontext,
                       'hunk': addhunk},
-            }
+        }
 
-    p = parser()
+    p = Parser()
 
     # run the state-machine
     state = 'context'
@@ -760,16 +780,17 @@ def parsepatch(fp: IO[bytes]):
             p.transitions[state][newstate](p, data)
         except KeyError:
             raise PatchError('unhandled transition: %s -> %s' %
-                                   (state, newstate))
+                             (state, newstate))
         state = newstate
     return p.finished()
+
 
 def filterpatch(opts, chunks, chunkselector, ui):
     """Interactively filter patch chunks into applied-only chunks"""
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
     # with curses.  Create a list of headers only.
-    headers = [c for c in chunks if isinstance(c, uiheader)]
+    headers = [c for c in chunks if isinstance(c, Header)]
 
     # if there are no changed files
     if len(headers) == 0:
@@ -778,21 +799,23 @@ def filterpatch(opts, chunks, chunkselector, ui):
     # let user choose headers/hunks/lines, and mark their applied flags accordingly
     chunkselector(opts, headers, ui)
 
-    appliedHunkList = []
-    for hdr in headers:
-        if (hdr.applied and
-            (hdr.special() or hdr.binary() or len([h for h in hdr.hunks if h.applied]) > 0)):
-            appliedHunkList.append(hdr)
+    applied_hunks = []
+    for header in headers:
+        if (header.applied and
+                (header.special() or header.binary() or len([
+                    h for h in header.hunks if h.applied
+                ]) > 0)):
+            applied_hunks.append(header)
             fixoffset = 0
-            for hnk in hdr.hunks:
-                if hnk.applied:
-                    appliedHunkList.append(hnk)
+            for hunk in header.hunks:
+                if hunk.applied:
+                    applied_hunks.append(hunk)
                     # adjust the 'to'-line offset of the hunk to be correct
-                    # after de-activating some of the other hunks for this file
+                    # after de-activating some other hunks for this file
                     if fixoffset:
-                        #hnk = copy.copy(hnk) # necessary??
-                        hnk.toline += fixoffset
+                        # hunk = copy.copy(hunk) # necessary??
+                        hunk.toline += fixoffset
                 else:
-                    fixoffset += hnk.removed - hnk.added
+                    fixoffset += hunk.removed - hunk.added
 
-    return appliedHunkList
+    return applied_hunks

@@ -60,7 +60,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
         chunks = crpatch.parsepatch(fp)
         for c in chunks:
-            if isinstance(c, crpatch.uiheader):
+            if isinstance(c, crpatch.Header):
                 fromfile, tofile = c.files()
                 if fromfile is not None:
                     fromfiles.add(fromfile)

@@ -14,7 +14,7 @@ import struct
 import termios
 import signal
 
-from .crpatch import patch, uiheader, uihunk, uihunkline
+from .crpatch import PatchRoot, Header, Hunk, HunkLine
 
 try:
     import curses
@@ -97,7 +97,7 @@ _confirmmessages = {
 class CursesChunkSelector:
     def __init__(self, headerlist, ui):
         # put the headers into a patch object
-        self.headerlist = patch(headerlist)
+        self.headerlist = PatchRoot(headerlist)
 
         self.ui = ui
 
@@ -294,7 +294,7 @@ class CursesChunkSelector:
         currentitem = self.currentselecteditem
 
         # try to fold the item
-        if not isinstance(currentitem, uihunkline):
+        if not isinstance(currentitem, HunkLine):
             if not currentitem.folded:
                 self.togglefolded(item=currentitem)
                 return
@@ -319,7 +319,7 @@ class CursesChunkSelector:
         """
         currentitem = self.currentselecteditem
 
-        if isinstance(currentitem, uiheader):
+        if isinstance(currentitem, Header):
             if not currentitem.folded:
                 self.togglefolded(item=currentitem)
                 return
@@ -373,7 +373,7 @@ class CursesChunkSelector:
 
         item.applied = not item.applied
 
-        if isinstance(item, uiheader):
+        if isinstance(item, Header):
             item.partial = False
             if item.applied:
                 # apply all its hunks
@@ -390,7 +390,7 @@ class CursesChunkSelector:
                     # un-apply all their hunklines
                     for hunkline in hnk.changedlines:
                         hunkline.applied = False
-        elif isinstance(item, uihunk):
+        elif isinstance(item, Hunk):
             item.partial = False
             # apply all it's hunklines
             for hunkline in item.changedlines:
@@ -415,7 +415,7 @@ class CursesChunkSelector:
                 item.header.partial = (somesiblingspartial or
                                         not allsiblingsapplied)
 
-        elif isinstance(item, uihunkline):
+        elif isinstance(item, HunkLine):
             siblingappliedstatus = [ln.applied for ln in item.hunk.changedlines]
             allsiblingsapplied = not (False in siblingappliedstatus)
             nosiblingsapplied = not (True in siblingappliedstatus)
@@ -467,19 +467,19 @@ class CursesChunkSelector:
         "Toggle folded flag of specified item (defaults to currently selected)"
         if item is None:
             item = self.currentselecteditem
-        if foldparent or (isinstance(item, uiheader) and item.neverunfolded):
-            if not isinstance(item, uiheader):
+        if foldparent or (isinstance(item, Header) and item.neverunfolded):
+            if not isinstance(item, Header):
                 # we need to select the parent item in this case
                 self.currentselecteditem = item = item.parentitem()
             elif item.neverunfolded:
                 item.neverunfolded = False
 
             # also fold any foldable children of the parent/current item
-            if isinstance(item, uiheader): # the original OR 'new' item
+            if isinstance(item, Header): # the original OR 'new' item
                 for child in item.allchildren():
                     child.folded = not item.folded
 
-        if isinstance(item, (uiheader, uihunk)):
+        if isinstance(item, (Header, Hunk)):
             item.folded = not item.folded
 
 
@@ -661,7 +661,7 @@ class CursesChunkSelector:
         """
         # create checkbox string
         if item.applied:
-            if not isinstance(item, uihunkline) and item.partial:
+            if not isinstance(item, HunkLine) and item.partial:
                 checkbox = "[~]"
             else:
                 checkbox = "[x]"
@@ -671,14 +671,14 @@ class CursesChunkSelector:
         try:
             if item.folded:
                 checkbox += "**"
-                if isinstance(item, uiheader):
+                if isinstance(item, Header):
                     # one of "M", "A", or "D" (modified, added, deleted)
                     filestatus = item.changetype
 
                     checkbox += filestatus + " "
             else:
                 checkbox += "  "
-                if isinstance(item, uiheader):
+                if isinstance(item, Header):
                     # add two more spaces for headers
                     checkbox += "  "
         except AttributeError: # not foldable
@@ -856,20 +856,20 @@ class CursesChunkSelector:
         selected = self.handleselection(item, recursechildren)
 
         # Patch object is a list of headers
-        if isinstance(item, patch):
+        if isinstance(item, PatchRoot):
             if recursechildren:
                 for hdr in item:
                     self.__printitem(hdr, ignorefolding,
                             recursechildren, outstr, towin)
         # TODO: eliminate all isinstance() calls
-        if isinstance(item, uiheader):
+        if isinstance(item, Header):
             outstr.append(self.printheader(item, selected, towin=towin,
                                        ignorefolding=ignorefolding))
             if recursechildren:
                 for hnk in item.hunks:
                     self.__printitem(hnk, ignorefolding,
                             recursechildren, outstr, towin)
-        elif (isinstance(item, uihunk) and
+        elif (isinstance(item, Hunk) and
               ((not item.header.folded) or ignorefolding)):
             # print the hunk data which comes before the changed-lines
             outstr.append(self.printhunklinesbefore(item, selected, towin=towin,
@@ -880,7 +880,7 @@ class CursesChunkSelector:
                             recursechildren, outstr, towin)
                 outstr.append(self.printhunklinesafter(item, towin=towin,
                                                 ignorefolding=ignorefolding))
-        elif (isinstance(item, uihunkline) and
+        elif (isinstance(item, HunkLine) and
               ((not item.hunk.folded) or ignorefolding)):
             outstr.append(self.printhunkchangedline(item, selected,
                 towin=towin))
