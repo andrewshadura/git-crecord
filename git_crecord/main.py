@@ -115,7 +115,7 @@ class Ui:
             for k, v in opts.items():
                 if k in ('author', 'date', 'amend', 'signoff', 'cleanup',
                          'reset_author', 'gpg_sign', 'no_gpg_sign',
-                         'reedit_message', 'reuse_message', 'quiet'):
+                         'reedit_message', 'reuse_message', 'fixup', 'quiet'):
                     if v is None:
                         continue
                     if isinstance(v, bool):
@@ -159,6 +159,7 @@ def main():
     parser.add_argument('-m', '--message', default=None, help='commit message')
     parser.add_argument('-c', '--reedit-message', metavar='COMMIT', default=None, help='reuse and edit message from specified commit')
     parser.add_argument('-C', '--reuse-message', metavar='COMMIT', default=None, help='reuse message from specified commit')
+    parser.add_argument('--fixup', metavar='COMMIT', default=None, help='create autosquash commit message to fixup specified commit')
     parser.add_argument('--reset-author', action='store_true', default=False, help='the commit is authored by me now (used with -C/-c/--amend)')
     parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
     parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
@@ -176,6 +177,9 @@ def main():
 
     opts = vars(args)
     opts['operation'] = subcommand
+
+    if opts['fixup'] and opts['fixup'].startswith('reword:'):
+        parser.error(_("Creating reword-only commits is not supported."))
 
     if subcommand == 'cstage':
         opts['index'] = True
