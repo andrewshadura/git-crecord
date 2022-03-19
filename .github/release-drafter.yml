@@ -1,12 +1,14 @@
 template: |
-  ## What’s Changed
+  ## What’s changed
 
   $CHANGES
 
 categories:
-  - title: 'Features'
-    label: 'feature'
-  - title: 'Bug Fixes'
+  - title: 'Features and enhancements'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: 'Bug fixes'
     labels:
       - 'fix'
       - 'bugfix'
