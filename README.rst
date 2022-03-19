@@ -23,7 +23,7 @@ split large changes into several smaller changesets.
 Installation
 ------------
 
-git-crecord assumes you have Python 3.6 or later installed as ``/usr/bin/python3``.
+git-crecord assumes you have Python 3.9 or later installed as ``/usr/bin/python3``.
 
 git-crecord ships with a setup.py installer based on setuptools.
 To install git-crecord, simply type::
