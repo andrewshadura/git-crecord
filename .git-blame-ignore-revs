@@ -1,0 +1,10 @@
+# git blame ignore list
+#
+# - Only add large (generally automated) reformatting to this list.
+# - Precede each revision with a comment containing the first line of its log.
+#   Group related entries in a single block.
+# - Only use full 40-character hashes.
+# - Append to the bottom of the file
+
+# Remove an unused function and unused function parameters (recordfunc)
+545dce2e5d0168ccf9e33ab42f6a26b63a45332f
