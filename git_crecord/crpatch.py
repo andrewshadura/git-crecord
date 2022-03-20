@@ -1034,9 +1034,8 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
     @@ -1,3 +1,3 @@
      RUN apt-get update
     - && apt-get install -y supervisor python3.8
-         git python3-pip ssl-cert
     + && apt-get install -y supervisor python3.9
-         git python3-pip ssl-cert time
+         git python3-pip ssl-cert
     """
     # if there are no changed files
     if len(patch) == 0:
