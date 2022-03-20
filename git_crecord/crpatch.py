@@ -445,6 +445,13 @@ class HunkLine(PatchNode):
     def diffop(self):
         return self.linetext[0:1]
 
+    def __repr__(self):
+        return "<hunkline/%c %s %s>" % (
+            self.linetext[0],
+            '[x]' if self.applied else '[ ]',
+            self.linetext[1:10]
+        )
+
     def __str__(self) -> str:
         return self.prettystr()
 
