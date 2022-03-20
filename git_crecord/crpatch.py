@@ -983,15 +983,22 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
     ...  16
     ...  17
     ... '''
+    >>> from functools import partial
+    >>> def hunk_selector(selections: Sequence[bool], opts, headers, ui):
+    ...     for i, hunk in enumerate(headers[0].hunks):
+    ...         hunk.applied = selections[i]
+    ...
+    >>> def line_selector(selections: Sequence[bool], opts, headers, ui):
+    ...     for i, hunkline in enumerate(headers[0].hunks[0].changedlines):
+    ...         hunkline.applied = selections[i]
+    ...
     >>> patch = parsepatch(io.BytesIO(rawpatch))
     >>> patch
     [<header b'dir/file.c' b'dir/file.c'>,
      <hunk b'dir/file.c'@1684>,
      <hunk b'dir/file.c'@1692>]
-    >>> def selector(opts, headers, ui):
-    ...     headers[0].hunks[0].applied = False
-    ...
-    >>> applied = filterpatch(None, patch, selector, None)
+    >>> selections = [False, True]
+    >>> applied = filterpatch(None, patch, partial(hunk_selector, selections), None)
     >>> applied
     [<header b'dir/file.c' b'dir/file.c'>,
      <hunk b'dir/file.c'@1692>]
@@ -1006,6 +1013,30 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
      15
      16
      17
+    >>> rawpatch = b'''diff --git a/Dockerfile b/Dockerfile
+    ... index 00083f466d4f..400252a22712 100644
+    ... --- a/Dockerfile
+    ... +++ b/Dockerfile
+    ... @@ -1,3 +1,3 @@
+    ...  RUN apt-get update
+    ... - && apt-get install -y supervisor python3.8
+    ... -    git python3-pip ssl-cert
+    ... + && apt-get install -y supervisor python3.9
+    ... +    git python3-pip ssl-cert time
+    ... '''
+    >>> patch = parsepatch(io.BytesIO(rawpatch))
+    >>> patch
+    [<header b'Dockerfile' b'Dockerfile'>,
+     <hunk b'Dockerfile'@1>]
+    >>> selections = [True, False, True, False]
+    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
+    >>> print(applied.hunks[0])
+    @@ -1,3 +1,3 @@
+     RUN apt-get update
+    - && apt-get install -y supervisor python3.8
+         git python3-pip ssl-cert
+    + && apt-get install -y supervisor python3.9
+         git python3-pip ssl-cert time
     """
     # if there are no changed files
     if len(patch) == 0:
