@@ -1040,51 +1040,6 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
      15
      16
      17
-    >>> rawpatch = b'''diff --git a/Dockerfile b/Dockerfile
-    ... index 00083f466d4f..400252a22712 100644
-    ... --- a/Dockerfile
-    ... +++ b/Dockerfile
-    ... @@ -1,3 +1,3 @@
-    ...  RUN apt-get update
-    ... - && apt-get install -y supervisor python3.8
-    ... -    git python3-pip ssl-cert
-    ... + && apt-get install -y supervisor python3.9
-    ... +    git python3-pip ssl-cert time
-    ... '''
-    >>> patch = parsepatch(io.BytesIO(rawpatch))
-    >>> patch
-    [<header b'Dockerfile' b'Dockerfile'>,
-     <hunk b'Dockerfile'@1>]
-    >>> selections = [True, False, True, False]
-    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
-    >>> print(applied.headers[0].hunks[0].changedlines)
-    [<hunkline/-/1 [x] b' && apt-g'>,
-     <hunkline/-/2 [ ] b'    git p'>,
-     <hunkline/+/1 [x] b' && apt-g'>,
-     <hunkline/+/2 [ ] b'    git p'>]
-    >>> print(applied.hunks[0])
-    @@ -1,3 +1,3 @@
-     RUN apt-get update
-    - && apt-get install -y supervisor python3.8
-    + && apt-get install -y supervisor python3.9
-         git python3-pip ssl-cert
-    >>> selections = [True, True, True, False]
-    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
-    >>> print(applied.hunks[0])
-    @@ -1,3 +1,2 @@
-     RUN apt-get update
-    - && apt-get install -y supervisor python3.8
-    + && apt-get install -y supervisor python3.9
-    -    git python3-pip ssl-cert
-    >>> selections = [True, False, True, True]
-    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
-    >>> print(applied.hunks[0])
-    @@ -1,3 +1,4 @@
-     RUN apt-get update
-    - && apt-get install -y supervisor python3.8
-    + && apt-get install -y supervisor python3.9
-         git python3-pip ssl-cert
-    +    git python3-pip ssl-cert time
     """
     # if there are no changed files
     if len(patch) == 0:
