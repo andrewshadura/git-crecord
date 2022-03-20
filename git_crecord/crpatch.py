@@ -432,6 +432,7 @@ class HunkLine(PatchNode):
 
     linetext: bytes
     hunk: 'Hunk'
+    offset: int
 
     def __init__(self, linetext: bytes, hunk: 'Hunk'):
         self.linetext = linetext
@@ -441,6 +442,8 @@ class HunkLine(PatchNode):
         # folding lines currently is not used/needed, but this flag is needed
         # in the prevItem method.
         self.folded = False
+        # at this moment, the offset of the line in the hunk isn’t known yet
+        self.offset = 0
 
     def __bytes__(self):
         if self.applied:
@@ -453,8 +456,9 @@ class HunkLine(PatchNode):
         return self.linetext[0:1]
 
     def __repr__(self):
-        return "<hunkline/%c %s %s>" % (
+        return "<hunkline/%c/%d %s %s>" % (
             self.linetext[0],
+            self.offset,
             '[x]' if self.applied else '[ ]',
             self.linetext[1:10]
         )
@@ -533,6 +537,7 @@ class Hunk(PatchNode):
         self.proc = proc
         self.changedlines = [HunkLine(line, self) for line in hunklines]
         self.added, self.removed = self.countchanges()
+        self.countoffsets()
         # used at end for detecting how many removed lines were un-applied
         self.originalremoved = self.removed
 
@@ -596,6 +601,17 @@ class Hunk(PatchNode):
         )
         return add, rem
 
+    def countoffsets(self):
+        fromline = 0
+        toline = 0
+        for line in self.changedlines:
+            if line.diffop == HunkLine.INSERT:
+                fromline += 1
+                line.offset = fromline
+            if line.diffop == HunkLine.DELETE:
+                toline += 1
+                line.offset = toline
+
     def getfromtoline(self):
         """Calculate the number of removed lines converted to context lines"""
         removedconvertedtocontext = self.originalremoved - self.removed
@@ -635,10 +651,21 @@ class Hunk(PatchNode):
         fp.write(self.getfromtoline())
         fp.write(b''.join(self.before))
 
-        # add the following to the list: (1) all applied lines, and
-        # (2) all unapplied removal lines (convert these to context lines)
-        for changedline in self.changedlines:
-            fp.write(bytes(changedline))
+        # Include these lines:
+        # (1) all applied lines
+        # (2) all unapplied removal lines (converted context lines)
+        # Lines are sorted by their offset in the original hunk,
+        # with removals coming first.
+        for line in sorted(
+                self.changedlines,
+                key=lambda line: (
+                        line.offset, line.diffop == HunkLine.INSERT
+                )
+        ):
+            if line.diffop == HunkLine.INSERT and not line.applied:
+                continue
+
+            fp.write(bytes(line))
 
         fp.write(b''.join(self.after))
 
@@ -1030,12 +1057,34 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
      <hunk b'Dockerfile'@1>]
     >>> selections = [True, False, True, False]
     >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
+    >>> print(applied.headers[0].hunks[0].changedlines)
+    [<hunkline/-/1 [x] b' && apt-g'>,
+     <hunkline/-/2 [ ] b'    git p'>,
+     <hunkline/+/1 [x] b' && apt-g'>,
+     <hunkline/+/2 [ ] b'    git p'>]
     >>> print(applied.hunks[0])
     @@ -1,3 +1,3 @@
      RUN apt-get update
     - && apt-get install -y supervisor python3.8
     + && apt-get install -y supervisor python3.9
          git python3-pip ssl-cert
+    >>> selections = [True, True, True, False]
+    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
+    >>> print(applied.hunks[0])
+    @@ -1,3 +1,2 @@
+     RUN apt-get update
+    - && apt-get install -y supervisor python3.8
+    + && apt-get install -y supervisor python3.9
+    -    git python3-pip ssl-cert
+    >>> selections = [True, False, True, True]
+    >>> applied = filterpatch(None, patch, partial(line_selector, selections), None)
+    >>> print(applied.hunks[0])
+    @@ -1,3 +1,4 @@
+     RUN apt-get update
+    - && apt-get install -y supervisor python3.8
+    + && apt-get install -y supervisor python3.9
+         git python3-pip ssl-cert
+    +    git python3-pip ssl-cert time
     """
     # if there are no changed files
     if len(patch) == 0:
