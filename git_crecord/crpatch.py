@@ -299,14 +299,11 @@ class Header(PatchNode):
         self._changetype = None
 
     def binary(self):
-        """
-        Return True if the file represented by the header is a binary file.
-        Otherwise return False.
-
-        """
+        """Return True if the file represented by the header is a binary file."""
         return any(h.startswith(b'GIT binary patch') for h in self.header)
 
     def pretty(self, fp: IO[str]):
+        """Pretty-print the header into a stream"""
         for h in self.header:
             if h.startswith(b'GIT binary patch'):
                 fp.write(_('this modifies a binary file (all or nothing)\n'))
@@ -659,7 +656,7 @@ class Hunk(PatchNode):
         for line in sorted(
                 self.changedlines,
                 key=lambda line: (
-                        line.offset, line.diffop == HunkLine.INSERT
+                    line.offset, line.diffop == HunkLine.INSERT
                 )
         ):
             if line.diffop == HunkLine.INSERT and not line.applied:

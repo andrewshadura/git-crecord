@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import MutableSequence, Sequence
 from gettext import gettext as _
+from textwrap import dedent
 
 from . import util
 
@@ -145,9 +146,7 @@ class CursesChunkSelector:
         self.waslasttoggleallapplied = True
 
     def handlefirstlineevent(self):
-        """
-        Handle 'g' to navigate to the top most file in the ncurses window.
-        """
+        """Handle 'g' to navigate to the top most file in the ncurses window."""
         self.currentselecteditem = self.headerlist[0]
         currentitem = self.currentselecteditem
         # select the parent item recursively until we're at a header
@@ -161,9 +160,9 @@ class CursesChunkSelector:
         self.currentselecteditem = currentitem
 
     def handlelastlineevent(self):
-        """
-        Handle 'G' to navigate to the bottom most file/hunk/line depending
-        on the whether the fold is active or not.
+        """Handle 'G' to navigate to the bottom most file/hunk/line.
+
+        The behaviour depends on the whether the fold is active or not.
 
         If the bottom most file is folded, it navigates to that file and stops there.
         If the bottom most file is unfolded, it navigates to the bottom most hunk in
@@ -263,10 +262,7 @@ class CursesChunkSelector:
         self.recenterdisplayedarea()
 
     def rightarrowevent(self):
-        """
-        Select (if possible) the first of this item's child-items.
-
-        """
+        """Select (if possible) the first of this item's child-items."""
         currentitem = self.currentselecteditem
         nextitem = currentitem.firstchild()
 
@@ -282,11 +278,11 @@ class CursesChunkSelector:
         self.recenterdisplayedarea()
 
     def leftarrowevent(self):
-        """
-        If the current item can be folded (i.e. it is an unfolded header or
-        hunk), then fold it.  Otherwise try select (if possible) the parent
-        of this item.
+        """Select parent or fold.
 
+        If the current item can be folded (i.e. it is an unfolded header or
+        hunk), then fold it. Otherwise, try to select (if possible) the parent
+        of this item.
         """
         currentitem = self.currentselecteditem
 
@@ -734,7 +730,7 @@ class CursesChunkSelector:
     def printhunklinesbefore(
         self, hunk: Hunk, selected=False, towin=True, ignorefolding=False
     ):
-        """includes start/end line indicator"""
+        """Print lines including the start/end line indicator."""
         outstr = ""
         # where hunk is in list of siblings
         hunkindex = hunk.header.hunks.index(hunk)
@@ -812,8 +808,8 @@ class CursesChunkSelector:
     def printitem(
         self, item=None, ignorefolding=False, recursechildren=True, towin=True
     ):
-        """
-        Use __printitem() to print the specified item.applied.
+        """Print the specified item.
+
         If item is not specified, then print the entire patch.
         (hiding folded elements, etc. -- see __printitem() docstring)
         """
@@ -996,10 +992,6 @@ class CursesChunkSelector:
                     colorpair |= textattrib
         return colorpair
 
-    def initcolorpair(self, *args, **kwargs):
-        """Same as getcolorpair."""
-        self.getcolorpair(*args, **kwargs)
-
     def helpwindow(self):
         """Print a help window to the screen.  Exit after any keypress."""
         helptext = """            [press any key to return to the patch-display]
@@ -1048,7 +1040,6 @@ The following are valid keystrokes:
 
     def confirmationwindow(self, windowtext):
         """Display an informational window, then wait for and return a keypress."""
-
         lines = windowtext.split("\n")
         confirmwin = curses.newwin(len(lines), 0, 0, 0)
         try:
@@ -1070,17 +1061,19 @@ The following are valid keystrokes:
             return True
 
         if review:
-            confirmtext = (
-"""If you answer yes to the following, the your currently chosen patch chunks
-will be loaded into an editor.  You may modify the patch from the editor, and
-save the changes if you wish to change the patch.  Otherwise, you can just
-close the editor without saving to accept the current patch as-is.
-
-NOTE: don't add/remove lines unless you also modify the range information.
-      Failing to follow this rule will result in the commit aborting.
-
-Are you sure you want to review/edit and confirm the selected changes [Yn]?
-""")
+            confirmtext = dedent(
+                """
+                If you answer yes to the following, the your currently chosen patch chunks
+                will be loaded into an editor.  You may modify the patch from the editor, and
+                save the changes if you wish to change the patch.  Otherwise, you can just
+                close the editor without saving to accept the current patch as-is.
+                
+                NOTE: don't add/remove lines unless you also modify the range information.
+                      Failing to follow this rule will result in the commit aborting.
+                
+                Are you sure you want to review/edit and confirm the selected changes [Yn]?
+                """
+            )
         else:
             confirmtext = _confirmmessages[self.opts['operation']]
 
@@ -1095,10 +1088,12 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
 
     def recenterdisplayedarea(self):
         """
-        once we scrolled with pg up pg down we can be pointing outside of the
-        display zone. we print the patch with towin=False to compute the
-        location of the selected item even though it is outside of the displayed
-        zone and then update the scroll.
+        Recenter the screen.
+
+        Once we scrolled with PgUp/PgDown, we can be pointing outside the
+        display zone. We print the patch with towin=False to compute the
+        location of the selected item even though it is outside the displayed
+        zone, and then update the scroll.
         """
         self.printitem(towin=False)
         self.updatescroll()
@@ -1109,7 +1104,6 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
         When the amend flag is set, a commit will modify the most recent
         commit, instead of creating a new commit.  Otherwise, a
         new commit will be created (the normal commit behavior).
-
         """
         if not self.opts.get('amend'):
             self.opts['amend'] = True
@@ -1197,16 +1191,15 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
         return False
 
     def main(self, stdscr, opts):
-        """
-        Method to be wrapped by curses.wrapper() for selecting chunks.
+        """Configure and restore signal handler, and run the record UI.
 
+        Method to be wrapped by curses.wrapper() for selecting chunks.
         """
         self.opts = opts
 
         origsigwinch = sentinel = object()
         if util.safehasattr(signal, 'SIGWINCH'):
-             origsigwinch = signal.signal(signal.SIGWINCH,
-                                          self.sigwinchhandler)
+            origsigwinch = signal.signal(signal.SIGWINCH, self.sigwinchhandler)
         try:
             return self._main(stdscr)
         finally:
@@ -1214,6 +1207,7 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
                 signal.signal(signal.SIGWINCH, origsigwinch)
 
     def _main(self, stdscr):
+        """Configure the display and run the event loop."""
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
@@ -1240,11 +1234,11 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
 
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
-        self.initcolorpair(None, None, name="normal")
-        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA, name="selected")
-        self.initcolorpair(curses.COLOR_RED, None, name="deletion")
-        self.initcolorpair(curses.COLOR_GREEN, None, name="addition")
-        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
+        self.getcolorpair(None, None, name="normal")
+        self.getcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA, name="selected")
+        self.getcolorpair(curses.COLOR_RED, None, name="deletion")
+        self.getcolorpair(curses.COLOR_GREEN, None, name="addition")
+        self.getcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numstatuslines, 0, 0, 0)
         self.statuswin.keypad(True)  # interpret arrow-key, etc. ESC sequences

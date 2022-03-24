@@ -14,13 +14,14 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 from __future__ import annotations
 
+from collections.abc import Sequence
 from gettext import gettext as _
 import os
 import subprocess
 import shutil
 import sys
 from pathlib import Path
-from typing import AnyStr, overload, Sequence, Optional, Union
+from typing import overload, Optional
 
 from .encoding import ucolwidth
 
@@ -29,8 +30,10 @@ closefds = os.name == 'posix'
 
 
 def explainexit(code):
-    """return a 2-tuple (desc, code) describing a subprocess status
-    (codes from kill are negative - not os.system/wait encoding)"""
+    """Return a 2-tuple (desc, code) describing a subprocess status.
+
+    Codes from kill are negative - not os.system/wait encoding.
+    """
     if (code < 0) and (os.name == 'posix'):
         return _("killed by signal %d") % -code, -code
     else:
@@ -87,7 +90,7 @@ def systemcall(
 def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
     try:
         sys.stdout.flush()
-    except Exception:
+    except Exception:  # noqa: B902
         pass
 
     p = subprocess.Popen(cmd, cwd=dir, stdout=subprocess.PIPE, close_fds=closefds)
@@ -111,7 +114,7 @@ def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
         return out
 
 
-def copyfile(src: Union[str, Path], dest: Union[str, Path], copystat=True):
+def copyfile(src: str | Path, dest: str | Path, copystat=True):
     """Copy a file, preserving mode and optionally other stat info like atime/mtime"""
     if os.path.lexists(dest):
         os.unlink(dest)
@@ -142,41 +145,41 @@ def trim(s, width, ellipsis='', leftside=False):
     If 'leftside' is True, left side of string 's' is trimmed.
     'ellipsis' is always placed at trimmed side.
 
-    >>> ellipsis = '+++'
+    >>> pluses = '+++'
     >>> encoding = 'utf-8'
     >>> t = '1234567890'
-    >>> print(trim(t, 12, ellipsis=ellipsis))
+    >>> print(trim(t, 12, ellipsis=pluses))
     1234567890
-    >>> print(trim(t, 10, ellipsis=ellipsis))
+    >>> print(trim(t, 10, ellipsis=pluses))
     1234567890
-    >>> print(trim(t, 8, ellipsis=ellipsis))
+    >>> print(trim(t, 8, ellipsis=pluses))
     12345+++
-    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    >>> print(trim(t, 8, ellipsis=pluses, leftside=True))
     +++67890
     >>> print(trim(t, 8))
     12345678
     >>> print(trim(t, 8, leftside=True))
     34567890
-    >>> print(trim(t, 3, ellipsis=ellipsis))
+    >>> print(trim(t, 3, ellipsis=pluses))
     +++
-    >>> print(trim(t, 1, ellipsis=ellipsis))
+    >>> print(trim(t, 1, ellipsis=pluses))
     +
     >>> t = '\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
-    >>> print(trim(t, 12, ellipsis=ellipsis))
+    >>> print(trim(t, 12, ellipsis=pluses))
     \u3042\u3044\u3046\u3048\u304a
-    >>> print(trim(t, 10, ellipsis=ellipsis))
+    >>> print(trim(t, 10, ellipsis=pluses))
     \u3042\u3044\u3046\u3048\u304a
-    >>> print(trim(t, 8, ellipsis=ellipsis))
+    >>> print(trim(t, 8, ellipsis=pluses))
     \u3042\u3044+++
-    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    >>> print(trim(t, 8, ellipsis=pluses, leftside=True))
     +++\u3048\u304a
     >>> print(trim(t, 5))
     \u3042\u3044
     >>> print(trim(t, 5, leftside=True))
     \u3048\u304a
-    >>> print(trim(t, 4, ellipsis=ellipsis))
+    >>> print(trim(t, 4, ellipsis=pluses))
     +++
-    >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
+    >>> print(trim(t, 4, ellipsis=pluses, leftside=True))
     +++
     """
     if ucolwidth(s) <= width:  # trimming is not needed

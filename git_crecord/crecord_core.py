@@ -21,16 +21,15 @@ from typing import IO, cast
 
 from .crpatch import Header, parsepatch, filterpatch
 from .chunk_selector import chunkselector
-from .gitrepo import GitRepo
 from .util import Abort, system, closefds, copyfile
 
 
 def dorecord(ui, repo, *pats, **opts):
-    """This is generic record driver.
+    """Drive the record process
 
-    Its job is to interactively filter local changes, and accordingly
-    prepare working dir into a state, where the job can be delegated to
-    non-interactive commit command such as 'commit' or 'qrefresh'.
+    Interactively filter local changes, and accordingly prepare working
+    directory into a state, where the job can be delegated to
+    non-interactive commit command such as 'commit'.
 
     After the actual job is done by non-interactive command, working dir
     state is restored to original.
@@ -48,7 +47,6 @@ def dorecord(ui, repo, *pats, **opts):
        "a/" and "b/" depending on what is being compared. Our parser only
        supports "a/" and "b/".
     """
-
     git_args = [
         "git",
         "-c",
@@ -185,7 +183,7 @@ def dorecord(ui, repo, *pats, **opts):
                 p.stdin.write(fp.getvalue())
                 p.stdin.close()
                 p.wait()
-            except Exception as err:
+            except Exception as err:  # noqa: B902
                 s = str(err)
                 if s:
                     raise Abort(s)
