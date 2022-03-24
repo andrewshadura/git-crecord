@@ -8,6 +8,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import argparse
+import importlib.metadata
 import os
 import sys
 import tempfile
@@ -179,6 +180,7 @@ class Ui:
 
 def main():
     prog = os.path.basename(sys.argv[0]).replace('-', ' ')
+    version = importlib.metadata.version("git-crecord")
 
     subcommand = prog.split(' ')[-1].replace('.py', '')
 
@@ -212,6 +214,7 @@ def main():
     parser.add_argument('--quiet', default=False, action='store_true', help='pass --quiet to git commit')
     parser.add_argument('--confirm', default=False, action='store_true',
                         help='show confirmation prompt after selecting changes')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {version}')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)
     group.add_argument('--index', action='store_true', default=False, help=argparse.SUPPRESS)
