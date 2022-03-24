@@ -7,8 +7,8 @@ interactively select changes to commit or stage
 -----------------------------------------------
 
 :Author: Andrej Shadura <andrew@shadura.me>
-:Date:   2016-12-25
-:Version: 0.1
+:Date:   2022-03-20
+:Version: 20220324.0
 :Manual section: 1
 :Manual group: Git
 
