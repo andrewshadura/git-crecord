@@ -73,14 +73,21 @@ def chunkselector(opts, headerlist, ui):
     signal.signal(signal.SIGTSTP, f)
 
 
-_headermessages = {
+header_messages = {
     # {operation: text}
     'crecord': _('Select hunks to commit'),
     'cstage': _('Select hunks to stage'),
     'cunstage': _('Select hunks to keep'),
 }
 
-_confirmmessages = {
+main_operation_messages = {
+    # {operation: text}
+    'crecord': _('c: commit'),
+    'cstage': _('s: stage'),
+    'cunstage': None,  # TODO: not implemented!
+}
+
+confirm_messages = {
     'crecord': _('Are you sure you want to commit the selected changes [Yn]?'),
     'cstage': _('Are you sure you want to stage the selected changes [Yn]?'),
     'cunstage': _('Are you sure you want to unstage the unselected changes [Yn]?'),
@@ -583,10 +590,10 @@ class CursesChunkSelector:
         """-> [str]. return segments"""
         selected = self.currentselecteditem.applied
         segments = [
-            _headermessages[self.opts['operation']],
+            header_messages[self.opts['operation']],
             '-',
             _('[x]=selected **=collapsed'),
-            _('c: commit'),
+            main_operation_messages[self.opts['operation']],
             _('q: abort'),
             _('arrow keys: move/expand/collapse'),
             _('space: deselect') if selected else _('space: select'),
@@ -1069,7 +1076,7 @@ The following are valid keystrokes:
                 """
             )
         else:
-            confirmtext = _confirmmessages[self.opts['operation']]
+            confirmtext = confirm_messages[self.opts['operation']]
 
         response = self.confirmationwindow(confirmtext)
 
