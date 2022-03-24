@@ -1110,15 +1110,6 @@ The following are valid keystrokes:
 
         self.confirmationwindow(msg)
 
-    def emptypatch(self):
-        item = self.headerlist
-        if not item:
-            return True
-        for header in item:
-            if header.hunks:
-                return False
-        return True
-
     def handlekeypressed(self, keypressed):
         """
         Perform actions based on pressed keys.
