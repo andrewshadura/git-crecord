@@ -149,6 +149,7 @@ class PatchNode:
     """
 
     folded: bool
+    applied: bool
     # a patch this node belongs to
     patch: 'PatchRoot'
 
@@ -426,7 +427,10 @@ class Header(PatchNode):
 class HunkLine(PatchNode):
     """Represents a changed line in a hunk"""
 
-    def __init__(self, linetext: bytes, hunk):
+    linetext: bytes
+    hunk: 'Hunk'
+
+    def __init__(self, linetext: bytes, hunk: 'Hunk'):
         self.linetext = linetext
         self.applied = True
         # the parent hunk to which this line belongs
@@ -468,7 +472,7 @@ class HunkLine(PatchNode):
         else:
             return None
 
-    def prevsibling(self):
+    def prevsibling(self) -> Optional['HunkLine']:
         """Return the previous line in the hunk"""
         indexofthisline = self.hunk.changedlines.index(self)
         if indexofthisline > 0:
@@ -477,7 +481,7 @@ class HunkLine(PatchNode):
         else:
             return None
 
-    def parentitem(self):
+    def parentitem(self) -> 'Hunk':
         """Return the parent to the current item"""
         return self.hunk
 
