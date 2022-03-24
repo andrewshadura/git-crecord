@@ -521,6 +521,7 @@ class Hunk(PatchNode):
     ):
         def trimcontext(number, lines):
             delta = len(lines) - self.maxcontext
+            # TODO: why is this disabled?
             if False and delta > 0:
                 return number + delta, lines[:self.maxcontext]
             return number, lines
