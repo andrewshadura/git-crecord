@@ -10,18 +10,17 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from gettext import gettext as _
-
-import io
 import errno
+import io
 import os
-import tempfile
 import subprocess
+import tempfile
+from gettext import gettext as _
 from typing import IO, cast
 
-from .crpatch import Header, parsepatch, filterpatch
 from .chunk_selector import chunkselector
-from .util import Abort, system, closefds, copyfile
+from .crpatch import Header, filterpatch, parsepatch
+from .util import Abort, closefds, copyfile, system
 
 
 def dorecord(ui, repo, *pats, **opts):

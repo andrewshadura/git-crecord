@@ -10,13 +10,10 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-# stuff related specifically to patch manipulation / parsing
-from gettext import gettext as _
-
 import io
 import re
 from codecs import register_error
-
+from gettext import gettext as _
 from typing import IO, Iterator, Optional, Sequence, Union
 
 from .util import unwrap_filename

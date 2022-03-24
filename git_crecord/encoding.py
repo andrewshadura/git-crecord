@@ -11,7 +11,6 @@
 
 import unicodedata
 
-
 # How to treat ambiguous-width characters. Set to 'WFA' to treat as wide.
 wide = "WF"
 

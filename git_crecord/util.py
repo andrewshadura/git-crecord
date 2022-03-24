@@ -14,17 +14,16 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import sys
 from collections.abc import Sequence
 from gettext import gettext as _
-import os
-import subprocess
-import shutil
-import sys
 from pathlib import Path
-from typing import overload, Optional
+from typing import Optional, overload
 
 from .encoding import ucolwidth
-
 
 closefds = os.name == 'posix'
 

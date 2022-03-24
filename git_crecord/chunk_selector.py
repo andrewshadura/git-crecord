@@ -11,25 +11,19 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 from __future__ import annotations
 
+import curses
+import fcntl
+import re
+import signal
+import struct
+import sys
+import termios
 from collections.abc import MutableSequence, Sequence
 from gettext import gettext as _
 from textwrap import dedent
 
-from . import util
-
-from . import encoding
-
-import re
-import sys
-import struct
-import signal
-
-from .crpatch import PatchRoot, Header, Hunk, HunkLine
-
-import curses
-import fcntl
-import termios
-
+from . import encoding, util
+from .crpatch import Header, Hunk, HunkLine, PatchRoot
 
 _origstdout = sys.__stdout__  # used by gethw()
 

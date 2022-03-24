@@ -7,14 +7,13 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from gettext import gettext as _
-from pathlib import Path
-from typing import Optional
-
 import argparse
 import os
 import sys
 import tempfile
+from gettext import gettext as _
+from pathlib import Path
+from typing import Optional
 
 from . import crecord_core
 from .gitrepo import GitRepo

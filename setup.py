@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import os
 import fnmatch
+import os
 from distutils import log
-from setuptools import setup  # type: ignore
-from setuptools.command import sdist, build_py
 
+from setuptools import setup
+from setuptools.command import build_py, sdist
 
 __manpages__ = 'git-*.rst'
 
