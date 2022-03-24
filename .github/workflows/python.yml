@@ -34,6 +34,14 @@ jobs:
           pip install .
           ./setup.py build sdist bdist
 
+      - name: Setup flake8 annotations
+        uses: rbialon/flake8-annotations@v1
+
+      - name: Lint with flake8
+        run: |
+          pip install .[lint]
+          flake8
+
       - name: Install test dependencies
         run: pip install .[test]
 
