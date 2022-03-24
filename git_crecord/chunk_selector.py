@@ -390,11 +390,11 @@ class CursesChunkSelector:
                 hunkline.applied = item.applied
 
             siblingappliedstatus = [hnk.applied for hnk in item.header.hunks]
-            allsiblingsapplied = not (False in siblingappliedstatus)
-            nosiblingsapplied = not (True in siblingappliedstatus)
+            allsiblingsapplied = all(siblingappliedstatus)
+            nosiblingsapplied = not any(siblingappliedstatus)
 
             siblingspartialstatus = [hnk.partial for hnk in item.header.hunks]
-            somesiblingspartial = (True in siblingspartialstatus)
+            somesiblingspartial = any(siblingspartialstatus)
 
             #cases where applied or partial should be removed from header
 
@@ -410,8 +410,8 @@ class CursesChunkSelector:
 
         elif isinstance(item, HunkLine):
             siblingappliedstatus = [ln.applied for ln in item.hunk.changedlines]
-            allsiblingsapplied = not (False in siblingappliedstatus)
-            nosiblingsapplied = not (True in siblingappliedstatus)
+            allsiblingsapplied = all(siblingappliedstatus)
+            nosiblingsapplied = not any(siblingappliedstatus)
 
             # if no 'sibling' lines are applied
             if nosiblingsapplied:
@@ -424,14 +424,12 @@ class CursesChunkSelector:
                 item.hunk.applied = True
                 item.hunk.partial = True
 
-            parentsiblingsapplied = [hnk.applied for hnk
-                                     in item.hunk.header.hunks]
-            noparentsiblingsapplied = not (True in parentsiblingsapplied)
-            allparentsiblingsapplied = not (False in parentsiblingsapplied)
+            parentsiblingsapplied = [hnk.applied for hnk in item.hunk.header.hunks]
+            noparentsiblingsapplied = not any(parentsiblingsapplied)
+            allparentsiblingsapplied = all(parentsiblingsapplied)
 
-            parentsiblingspartial = [hnk.partial for hnk
-                                     in item.hunk.header.hunks]
-            someparentsiblingspartial = (True in parentsiblingspartial)
+            parentsiblingspartial = [hnk.partial for hnk in item.hunk.header.hunks]
+            someparentsiblingspartial = any(parentsiblingspartial)
 
             # if all parent hunks are not applied, un-apply header
             if noparentsiblingsapplied:
