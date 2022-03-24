@@ -22,5 +22,3 @@ def ucolwidth(d: str) -> int:
     if eaw is not None:
         return sum([eaw(c) in wide and 2 or 1 for c in d])
     return len(d)
-
-

@@ -27,8 +27,7 @@ class GitTree:
         return "%s(%r)" % (self.__class__.__name__, self._tree)
 
     def read(self):
-        util.system(['git', 'read-tree', '--reset',
-                     self._tree], onerr=RuntimeError)
+        util.system(['git', 'read-tree', '--reset', self._tree], onerr=RuntimeError)
 
 
 class GitIndex:
@@ -60,17 +59,21 @@ class GitIndex:
 class GitRepo:
     def __init__(self, path: os.PathLike | str | None):
         try:
-            self.path = Path(util.systemcall(
-                ['git', 'rev-parse', '--show-toplevel'],
-                dir=path,
-                encoding="fs",
-                onerr=util.Abort
-            ).rstrip('\n'))
-            self._controldir = Path(util.systemcall(
-                ['git', 'rev-parse', '--git-dir'],
-                dir=path,
-                encoding="fs",
-            ).rstrip('\n'))
+            self.path = Path(
+                util.systemcall(
+                    ['git', 'rev-parse', '--show-toplevel'],
+                    dir=path,
+                    encoding="fs",
+                    onerr=util.Abort,
+                ).rstrip('\n')
+            )
+            self._controldir = Path(
+                util.systemcall(
+                    ['git', 'rev-parse', '--git-dir'],
+                    dir=path,
+                    encoding="fs",
+                ).rstrip('\n')
+            )
             if not self._controldir.is_dir():
                 raise util.Abort
         except util.Abort:

@@ -49,7 +49,15 @@ def dorecord(ui, repo, *pats, **opts):
        supports "a/" and "b/".
     """
 
-    git_args = ["git", "-c", "core.quotePath=false", "-c", "diff.mnemonicPrefix=false", "diff", "--binary"]
+    git_args = [
+        "git",
+        "-c",
+        "core.quotePath=false",
+        "-c",
+        "diff.mnemonicPrefix=false",
+        "diff",
+        "--binary",
+    ]
     git_base = []
 
     if opts['cached']:
@@ -58,7 +66,9 @@ def dorecord(ui, repo, *pats, **opts):
     if not opts['index'] and repo.head():
         git_base.append("HEAD")
 
-    p = subprocess.Popen(git_args + git_base, stdout=subprocess.PIPE, close_fds=closefds)
+    p = subprocess.Popen(
+        git_args + git_base, stdout=subprocess.PIPE, close_fds=closefds
+    )
     fp = cast(IO[bytes], p.stdout)
 
     # 0. parse patch
@@ -80,9 +90,7 @@ def dorecord(ui, repo, *pats, **opts):
     changes = [modified, added, removed]
 
     # 1. filter patch, so we have intending-to apply subset of it
-    chunks = filterpatch(opts,
-                         chunks,
-                         chunkselector, ui)
+    chunks = filterpatch(opts, chunks, chunkselector, ui)
     p.wait()
     del fp
 
@@ -151,8 +159,14 @@ def dorecord(ui, repo, *pats, **opts):
 
         # 3a. apply filtered patch to clean repo  (clean)
         if backups or any((f in contenders for f in removed)):
-            system(['git', 'checkout', '-f'] + git_base + ['--'] + [f for f in newfiles if f not in added],
-                   onerr=Abort, errprefix=_("checkout failed"))
+            system(
+                ["git", "checkout", "-f"]
+                + git_base
+                + ["--"]
+                + [f for f in newfiles if f not in added],
+                onerr=Abort,
+                errprefix=_("checkout failed"),
+            )
         # remove newly added files from 'clean' repo (so patch can apply)
         for f in newly_added_backups:
             pathname = repo.path / f
@@ -166,7 +180,7 @@ def dorecord(ui, repo, *pats, **opts):
                 p = subprocess.Popen(
                     ["git", "apply", "--whitespace=nowarn"],
                     stdin=subprocess.PIPE,
-                    close_fds=closefds
+                    close_fds=closefds,
                 )
                 p.stdin.write(fp.getvalue())
                 p.stdin.close()

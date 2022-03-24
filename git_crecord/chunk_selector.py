@@ -43,7 +43,8 @@ def gethw() -> tuple[int, int]:
 
     """
     h, w = struct.unpack(
-        "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, b"\0"*8))[0:2]
+        "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, b"\0" * 8)
+    )[0:2]
     return h, w
 
 
@@ -57,6 +58,7 @@ def chunkselector(opts, headerlist, ui):
     # This is required for ncurses to display non-ASCII characters in default user
     # locale encoding correctly.  --immerrr
     import locale
+
     locale.setlocale(locale.LC_ALL, '')
 
     class DummyStdscr:
@@ -396,7 +398,7 @@ class CursesChunkSelector:
             siblingspartialstatus = [hnk.partial for hnk in item.header.hunks]
             somesiblingspartial = any(siblingspartialstatus)
 
-            #cases where applied or partial should be removed from header
+            # cases where applied or partial should be removed from header
 
             # if no 'sibling' hunks are applied (including this hunk)
             if nosiblingsapplied:
@@ -405,9 +407,7 @@ class CursesChunkSelector:
                     item.header.partial = False
             else:  # some/all parent siblings are applied
                 item.header.applied = True
-                item.header.partial = (somesiblingspartial or
-                                       not allsiblingsapplied)
-
+                item.header.partial = somesiblingspartial or not allsiblingsapplied
         elif isinstance(item, HunkLine):
             siblingappliedstatus = [ln.applied for ln in item.hunk.changedlines]
             allsiblingsapplied = all(siblingappliedstatus)
@@ -439,8 +439,7 @@ class CursesChunkSelector:
             # set the applied and partial status of the header if needed
             else:  # some/all parent siblings are applied
                 item.hunk.header.applied = True
-                item.hunk.header.partial = (someparentsiblingspartial or
-                                            not allparentsiblingsapplied)
+                item.hunk.header.partial = someparentsiblingspartial or not allparentsiblingsapplied
 
     def toggleall(self):
         """Toggle the applied flag of all items."""
@@ -473,7 +472,6 @@ class CursesChunkSelector:
         if isinstance(item, (Header, Hunk)):
             item.folded = not item.folded
 
-
     def alignstring(self, instr, window):
         """
         Add whitespace to the end of a string in order to make it fill
@@ -490,8 +488,19 @@ class CursesChunkSelector:
         numspaces = width - ((strwidth + xstart) % width)
         return instr + " " * numspaces
 
-    def printstring(self, window, text, fgcolor=None, bgcolor=None, pair=None,
-        pairname=None, attrlist=None, towin=True, align=True, showwhtspc=False):
+    def printstring(
+        self,
+        window,
+        text,
+        fgcolor=None,
+        bgcolor=None,
+        pair=None,
+        pairname=None,
+        attrlist=None,
+        towin=True,
+        align=True,
+        showwhtspc=False,
+    ):
         """
         Print the string, text, with the specified colors and attributes, to
         the specified curses window object.
@@ -679,8 +688,9 @@ class CursesChunkSelector:
 
         return checkbox
 
-    def printheader(self, header: Header, selected=False, towin=True,
-                    ignorefolding=False):
+    def printheader(
+        self, header: Header, selected=False, towin=True, ignorefolding=False
+    ):
         """
         Print the header to the pad.  If countLines is True, don't print
         anything, but just count the number of lines which would be printed.
@@ -692,11 +702,13 @@ class CursesChunkSelector:
 
         if chunkindex != 0 and not header.folded:
             # add separating line before headers
-            outstr += self.printstring(self.chunkpad, '_' * self.xscreensize,
-                                       towin=towin, align=False)
+            outstr += self.printstring(
+                self.chunkpad, "_" * self.xscreensize, towin=towin, align=False
+            )
         # select color-pair based on if the header is selected
-        colorpair = self.getcolorpair(name=selected and "selected" or "normal",
-                                      attrlist=[curses.A_BOLD])
+        colorpair = self.getcolorpair(
+            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+        )
 
         # print out each line of the chunk, expanding it to screen width
 
@@ -708,19 +720,20 @@ class CursesChunkSelector:
             linestr = checkbox + textlist[0]
         else:
             linestr = checkbox + header.filename()
-        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair,
-                                   towin=towin)
+        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair, towin=towin)
         if not header.folded or ignorefolding:
             if len(textlist) > 1:
                 for line in textlist[1:]:
-                    linestr = " "*(indentnumchars + len(checkbox)) + line
-                    outstr += self.printstring(self.chunkpad, linestr,
-                                               pair=colorpair, towin=towin)
+                    linestr = " " * (indentnumchars + len(checkbox)) + line
+                    outstr += self.printstring(
+                        self.chunkpad, linestr, pair=colorpair, towin=towin
+                    )
 
         return outstr
 
-    def printhunklinesbefore(self, hunk: Hunk, selected=False, towin=True,
-                             ignorefolding=False):
+    def printhunklinesbefore(
+        self, hunk: Hunk, selected=False, towin=True, ignorefolding=False
+    ):
         """includes start/end line indicator"""
         outstr = ""
         # where hunk is in list of siblings
@@ -728,22 +741,24 @@ class CursesChunkSelector:
 
         if hunkindex != 0:
             # add separating line before headers
-            outstr += self.printstring(self.chunkpad, ' '*self.xscreensize,
-                                       towin=towin, align=False)
+            outstr += self.printstring(
+                self.chunkpad, " " * self.xscreensize, towin=towin, align=False
+            )
 
-        colorpair = self.getcolorpair(name=selected and "selected" or "normal",
-                                      attrlist=[curses.A_BOLD])
+        colorpair = self.getcolorpair(
+            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+        )
 
         # print out from-to line with checkbox
         checkbox = self.getstatusprefixstring(hunk)
 
-        lineprefix = " "*self.hunkindentnumchars + checkbox
+        lineprefix = " " * self.hunkindentnumchars + checkbox
         frtoline = "   " + hunk.getfromtoline().decode("UTF-8", errors="hexreplace").strip("\n")
 
-        outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
-                                   align=False)  # add uncolored checkbox/indent
-        outstr += self.printstring(self.chunkpad, frtoline, pair=colorpair,
-                                   towin=towin)
+        outstr += self.printstring(
+            self.chunkpad, lineprefix, towin=towin, align=False
+        )  # add uncolored checkbox/indent
+        outstr += self.printstring(self.chunkpad, frtoline, pair=colorpair, towin=towin)
 
         if hunk.folded and not ignorefolding:
             # skip remainder of output
@@ -751,7 +766,7 @@ class CursesChunkSelector:
 
         # print out lines of the chunk preceding changed-lines
         for line in hunk.before:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
+            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
@@ -764,7 +779,7 @@ class CursesChunkSelector:
         # a bit superfluous, but to avoid hard-coding indent amount
         checkbox = self.getstatusprefixstring(hunk)
         for line in hunk.after:
-            linestr = " "*(self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
+            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line.decode("UTF-8", errors="hexreplace")
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
@@ -785,15 +800,18 @@ class CursesChunkSelector:
         elif linestr.startswith("\\"):
             colorpair = self.getcolorpair(name="normal")
 
-        lineprefix = " "*self.hunklineindentnumchars + checkbox
-        outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
-                                   align=False)  # add uncolored checkbox/indent
-        outstr += self.printstring(self.chunkpad, linestr, pair=colorpair,
-                                   towin=towin, showwhtspc=True)
+        lineprefix = " " * self.hunklineindentnumchars + checkbox
+        outstr += self.printstring(
+            self.chunkpad, lineprefix, towin=towin, align=False
+        )  # add uncolored checkbox/indent
+        outstr += self.printstring(
+            self.chunkpad, linestr, pair=colorpair, towin=towin, showwhtspc=True
+        )
         return outstr
 
-    def printitem(self, item=None, ignorefolding=False, recursechildren=True,
-                  towin=True):
+    def printitem(
+        self, item=None, ignorefolding=False, recursechildren=True, towin=True
+    ):
         """
         Use __printitem() to print the specified item.applied.
         If item is not specified, then print the entire patch.
@@ -820,14 +838,13 @@ class CursesChunkSelector:
         return y < miny or y > maxy
 
     def handleselection(self, item, recursechildren):
-        selected = (item is self.currentselecteditem)
+        selected = item is self.currentselecteditem
         if selected and recursechildren:
             # assumes line numbering starting from line 0
             self.selecteditemstartline = self.linesprintedtopadsofar
-            selecteditemlines = self.getnumlinesdisplayed(item,
-                                                          recursechildren=False)
-            self.selecteditemendline = (self.selecteditemstartline +
-                                        selecteditemlines - 1)
+            selecteditemlines = self.getnumlinesdisplayed(item, recursechildren=False)
+            self.selecteditemendline = self.selecteditemstartline + selecteditemlines - 1
+
         return selected
 
     def __printitem(
@@ -858,36 +875,42 @@ class CursesChunkSelector:
         if isinstance(item, PatchRoot):
             if recursechildren:
                 for hdr in item:
-                    self.__printitem(hdr, ignorefolding,
-                            recursechildren, outstr, towin)
+                    self.__printitem(hdr, ignorefolding, recursechildren, outstr, towin)
         # TODO: eliminate all isinstance() calls
         if isinstance(item, Header):
-            outstr.append(self.printheader(item, selected, towin=towin,
-                                       ignorefolding=ignorefolding))
+            outstr.append(
+                self.printheader(
+                    item, selected, towin=towin, ignorefolding=ignorefolding
+                )
+            )
             if recursechildren:
                 for hnk in item.hunks:
-                    self.__printitem(hnk, ignorefolding,
-                            recursechildren, outstr, towin)
-        elif (isinstance(item, Hunk) and
-              ((not item.header.folded) or ignorefolding)):
+                    self.__printitem(hnk, ignorefolding, recursechildren, outstr, towin)
+        elif isinstance(item, Hunk) and ((not item.header.folded) or ignorefolding):
             # print the hunk data which comes before the changed-lines
-            outstr.append(self.printhunklinesbefore(item, selected, towin=towin,
-                                                ignorefolding=ignorefolding))
+            outstr.append(
+                self.printhunklinesbefore(
+                    item, selected, towin=towin, ignorefolding=ignorefolding
+                )
+            )
             if recursechildren:
                 for line in item.changedlines:
-                    self.__printitem(line, ignorefolding,
-                            recursechildren, outstr, towin)
-                outstr.append(self.printhunklinesafter(item, towin=towin,
-                                                ignorefolding=ignorefolding))
-        elif (isinstance(item, HunkLine) and
-              ((not item.hunk.folded) or ignorefolding)):
-            outstr.append(self.printhunkchangedline(item, selected,
-                towin=towin))
+                    self.__printitem(
+                        line, ignorefolding, recursechildren, outstr, towin
+                    )
+                outstr.append(
+                    self.printhunklinesafter(
+                        item, towin=towin, ignorefolding=ignorefolding
+                    )
+                )
+        elif isinstance(item, HunkLine) and ((not item.hunk.folded) or ignorefolding):
+            outstr.append(self.printhunkchangedline(item, selected, towin=towin))
 
         return outstr
 
-    def getnumlinesdisplayed(self, item=None, ignorefolding=False,
-                             recursechildren=True):
+    def getnumlinesdisplayed(
+        self, item=None, ignorefolding=False, recursechildren=True
+    ):
         """
         Return the number of lines which would be displayed if the item were
         to be printed to the display.  The item will NOT be printed to the
@@ -898,8 +921,9 @@ class CursesChunkSelector:
 
         """
         # temporarily disable printing to windows by printstring
-        patchdisplaystring = self.printitem(item, ignorefolding,
-                                            recursechildren, towin=False)
+        patchdisplaystring = self.printitem(
+            item, ignorefolding, recursechildren, towin=False
+        )
         numlines = len(patchdisplaystring) // self.xscreensize
         return numlines
 
@@ -915,8 +939,7 @@ class CursesChunkSelector:
         except curses.error:
             pass
 
-    def getcolorpair(self, fgcolor=None, bgcolor=None, name=None,
-                     attrlist=None):
+    def getcolorpair(self, fgcolor=None, bgcolor=None, name=None, attrlist=None):
         """
         Get a curses color pair, adding it to self.colorPairs if it is not
         already defined.  An optional string, name, can be passed as a shortcut
@@ -946,8 +969,9 @@ class CursesChunkSelector:
                 pairindex = len(self.colorpairs) + 1
                 if self.usecolor:
                     curses.init_pair(pairindex, fgcolor, bgcolor)
-                    colorpair = self.colorpairs[(fgcolor, bgcolor)] = (
-                        curses.color_pair(pairindex))
+                    colorpair = self.colorpairs[(fgcolor, bgcolor)] = curses.color_pair(
+                        pairindex
+                    )
                     if name is not None:
                         self.colorpairnames[name] = curses.color_pair(pairindex)
                 else:
@@ -1007,8 +1031,9 @@ The following are valid keystrokes:
 
         helpwin = curses.newwin(self.yscreensize, 0, 0, 0)
         helplines = helptext.split("\n")
-        helplines = helplines + [" "]*(
-            self.yscreensize - self.numstatuslines - len(helplines) - 1)
+        helplines = helplines + [" "] * (
+            self.yscreensize - self.numstatuslines - len(helplines) - 1
+        )
         try:
             self.printstring(helpwin, helplines[0], pairname="legend")
             for line in helplines[1:]:
@@ -1216,8 +1241,7 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
         self.initcolorpair(None, None, name="normal")
-        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA,
-                           name="selected")
+        self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_MAGENTA, name="selected")
         self.initcolorpair(curses.COLOR_RED, None, name="deletion")
         self.initcolorpair(curses.COLOR_GREEN, None, name="addition")
         self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
@@ -1241,7 +1265,8 @@ Are you sure you want to review/edit and confirm the selected changes [Yn]?
             return
         # initialize selecteditemendline (initial start-line is 0)
         self.selecteditemendline = self.getnumlinesdisplayed(
-            self.currentselecteditem, recursechildren=False)
+            self.currentselecteditem, recursechildren=False
+        )
 
         # option which enables/disables patch-review (in editor) step
         self.opts['crecord_reviewpatch'] = False

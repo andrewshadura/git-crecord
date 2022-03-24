@@ -246,11 +246,9 @@ class PatchNode:
         prevsibling = self.prevsibling()
         if prevsibling is not None:
             prevsiblinglastchild = prevsibling.lastchild()
-            if ((prevsiblinglastchild is not None) and
-                    not prevsibling.folded):
+            if (prevsiblinglastchild is not None) and not prevsibling.folded:
                 prevsiblinglclc = prevsiblinglastchild.lastchild()
-                if ((prevsiblinglclc is not None) and
-                        not prevsiblinglastchild.folded):
+                if (prevsiblinglclc is not None) and not prevsiblinglastchild.folded:
                     return prevsiblinglclc
                 else:
                     return prevsiblinglastchild
@@ -275,6 +273,7 @@ class PatchNode:
 
 class Header(PatchNode):
     """Patch header"""
+
     diff_re = re.compile(b'diff --git (?P<fromfile>(?P<aq>")?a/.*(?(aq)"|)) (?P<tofile>(?P<bq>")?b/.*(?(bq)"|))$')
     allhunks_re = re.compile(b'(?:GIT binary patch|new file|deleted file) ')
     pretty_re = re.compile(b'(?:new file|deleted file) ')
@@ -488,6 +487,7 @@ class HunkLine(PatchNode):
 
 class Hunk(PatchNode):
     """ui patch hunk, wraps a hunk and keeps track of ui behavior """
+
     maxcontext = 3
     header: Header
     fromline: int
@@ -498,14 +498,14 @@ class Hunk(PatchNode):
     changedlines: Sequence[HunkLine]
 
     def __init__(
-            self,
-            header: Header,
-            fromline: int,
-            toline: int,
-            proc: bytes,
-            before: Sequence[bytes],
-            hunklines: Sequence[bytes],
-            after: Sequence[bytes]
+        self,
+        header: Header,
+        fromline: int,
+        toline: int,
+        proc: bytes,
+        before: Sequence[bytes],
+        hunklines: Sequence[bytes],
+        after: Sequence[bytes],
     ):
         def trimcontext(number, lines):
             delta = len(lines) - self.maxcontext
@@ -574,10 +574,12 @@ class Hunk(PatchNode):
 
     def countchanges(self) -> tuple[int, int]:
         """changedlines -> (n+,n-)"""
-        add = len([line for line in self.changedlines if line.applied
-                   and line.diffop == b'+'])
-        rem = len([line for line in self.changedlines if line.applied
-                   and line.diffop == b'-'])
+        add = len(
+            [line for line in self.changedlines if line.applied and line.diffop == b"+"]
+        )
+        rem = len(
+            [line for line in self.changedlines if line.applied and line.diffop == b"-"]
+        )
         return add, rem
 
     def getfromtoline(self):
@@ -603,9 +605,13 @@ class Hunk(PatchNode):
         if tolen == 0 and toline > 0:
             toline -= 1
 
-        fromtoline = b'@@ -%d,%d +%d,%d @@%b\n' % (
-            fromline, fromlen, toline, tolen,
-            self.proc and (b' ' + self.proc))
+        fromtoline = b"@@ -%d,%d +%d,%d @@%b\n" % (
+            fromline,
+            fromlen,
+            toline,
+            tolen,
+            self.proc and (b" " + self.proc),
+        )
 
         return fromtoline
 
@@ -642,10 +648,21 @@ class Hunk(PatchNode):
          4
          5
         """
-        m = {b'+': b'-', b'-': b'+', b'\\': b'\\'}
-        hunklines = [b'%s%s' % (m[line.linetext[0:1]], line.linetext[1:])
-                     for line in self.changedlines if line.applied]
-        return Hunk(self.header, self.fromline, self.toline, self.proc, self.before, hunklines, self.after)
+        m = {b"+": b"-", b"-": b"+", b"\\": b"\\"}
+        hunklines = [
+            b"%s%s" % (m[line.linetext[0:1]], line.linetext[1:])
+            for line in self.changedlines
+            if line.applied
+        ]
+        return Hunk(
+            self.header,
+            self.fromline,
+            self.toline,
+            self.proc,
+            self.before,
+            hunklines,
+            self.after,
+        )
 
     def files(self) -> list[Optional[bytes]]:
         return self.header.files()
@@ -826,8 +843,15 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
             next hunk we parse.
 
             """
-            h = Hunk(self.header, self.fromline, self.toline, self.proc,
-                     self.before, self.hunk, self.context)
+            h = Hunk(
+                self.header,
+                self.fromline,
+                self.toline,
+                self.proc,
+                self.before,
+                self.hunk,
+                self.context,
+            )
             self.header.hunks.append(h)
             self.headers.append(h)
             self.fromline += len(self.before) + h.removed + len(self.context)
@@ -844,7 +868,7 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
             Also, if an unprocessed set of changelines was previously
             encountered, this is the condition for creating a complete
             hunk object.  In this case, we create and add a new hunk object to
-            the most recent header object, and to self.strem. 
+            the most recent header object, and to self.strem.
 
             """
             self.context = context
@@ -872,7 +896,7 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
             filename the header applies to.  Add the header to self.headers.
 
             """
-            # if there are any lines in the unchanged-lines buffer, create a 
+            # if there are any lines in the unchanged-lines buffer, create a
             # new hunk using them, and add it to the last header.
             if self.hunk:
                 self.add_new_hunk()
@@ -883,7 +907,7 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
             self.header = h
 
         def finished(self):
-            # if there are any lines in the unchanged-lines buffer, create a 
+            # if there are any lines in the unchanged-lines buffer, create a
             # new hunk using them, and add it to the last header.
             if self.hunk:
                 self.add_new_hunk()
@@ -952,7 +976,7 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
      <hunk b'dir/file.c'@1692>]
     >>> def selector(opts, headers, ui):
     ...     headers[0].hunks[0].applied = False
-    ... 
+    ...
     >>> applied = filterpatch(None, patch, selector, None)
     >>> applied
     [<header b'dir/file.c' b'dir/file.c'>,
@@ -978,10 +1002,11 @@ def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
 
     applied_hunks = PatchRoot([])
     for header in patch.headers:
-        if (header.applied and
-                (header.special() or header.binary() or len([
-                    h for h in header.hunks if h.applied
-                ]) > 0)):
+        if header.applied and (
+            header.special()
+            or header.binary()
+            or len([h for h in header.hunks if h.applied]) > 0
+        ):
             applied_hunks.append(header)
             fixoffset = 0
             for hunk in header.hunks:

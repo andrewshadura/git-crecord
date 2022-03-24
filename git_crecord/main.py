@@ -67,11 +67,13 @@ class Ui:
 
     @property
     def editor(self) -> str:
-        return (os.environ.get("GIT_EDITOR") or
-                self.config.get("core", "editor") or
-                os.environ.get("VISUAL") or
-                os.environ.get("EDITOR") or
-                'sensible-editor')
+        return (
+            os.environ.get("GIT_EDITOR")
+            or self.config.get("core", "editor")
+            or os.environ.get("VISUAL")
+            or os.environ.get("EDITOR")
+            or "sensible-editor"
+        )
 
     def edit(self, text: bytes, user, extra=None, name=None) -> bytes:
         f = tempfile.NamedTemporaryFile(
@@ -86,8 +88,9 @@ class Ui:
 
             editor = self.editor
 
-            system("%s \"%s\"" % (editor, f.name),
-                   onerr=Abort, errprefix=_("edit failed"))
+            system(
+                '%s "%s"' % (editor, f.name), onerr=Abort, errprefix=_("edit failed")
+            )
 
             t = Path(f.name).read_bytes()
 
@@ -99,44 +102,77 @@ class Ui:
     def stage(self, *files, **opts):
         to_add = [f for f in files if os.path.exists(f)]
         if to_add:
-            system(['git', 'add', '-f', '-N', '--'] + to_add,
-                   onerr=Abort, errprefix=_("add failed"))
+            system(
+                ['git', 'add', '-f', '-N', '--'] + to_add,
+                onerr=Abort,
+                errprefix=_("add failed"),
+            )
 
     def commit(self, *files, **opts):
         msgfile = self.repo.controldir / "CRECORD_COMMITMSG"
         try:
             args = []
 
-            if opts['message']:
-                msgfile.write_text(opts['message'])
+            if opts["message"]:
+                msgfile.write_text(opts["message"])
 
-            if opts['cleanup'] is None:
-                opts['cleanup'] = 'strip'
+            if opts["cleanup"] is None:
+                opts["cleanup"] = "strip"
 
             for k, v in opts.items():
-                if k in ('author', 'date', 'amend', 'signoff', 'cleanup',
-                         'reset_author', 'gpg_sign', 'no_gpg_sign',
-                         'reedit_message', 'reuse_message', 'fixup', 'quiet'):
+                if k in (
+                    "author",
+                    "date",
+                    "amend",
+                    "signoff",
+                    "cleanup",
+                    "reset_author",
+                    "gpg_sign",
+                    "no_gpg_sign",
+                    "reedit_message",
+                    "reuse_message",
+                    "fixup",
+                    "quiet",
+                ):
                     if v is None:
                         continue
                     if isinstance(v, bool):
                         if v is True:
-                            args.append('--%s' % k.replace('_', '-'))
+                            args.append("--%s" % k.replace("_", "-"))
                     else:
-                        args.append('--%s=%s' % (k.replace('_', '-'), v))
+                        args.append("--%s=%s" % (k.replace("_", "-"), v))
 
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:
-                system(['git', 'add', '-f', '-N', '--'] + to_add,
-                       onerr=Abort, errprefix=_("add failed"))
-            if not opts['message']:
-                system(['git', 'commit'] + args + ['--'] + list(files),
-                       onerr=Abort, errprefix=_("commit failed"))
+                system(
+                    ['git', 'add', '-f', '-N', '--'] + to_add,
+                    onerr=Abort,
+                    errprefix=_("add failed"),
+                )
+            if not opts["message"]:
+                system(
+                    ['git', 'commit'] + args + ['--'] + list(files),
+                    onerr=Abort,
+                    errprefix=_("commit failed"),
+                )
             else:
-                system(['git', 'commit', '-F', msgfile.name] + args + ['--'] + list(files),
-                       onerr=Abort, errprefix=_("commit failed"))
+                system(
+                    ['git', 'commit', '-F', msgfile.name] + args + ['--'] + list(files),
+                    onerr=Abort,
+                    errprefix=_("commit failed"),
+                )
             # refresh the index so that gitk doesn’t show empty staged diffs
-            systemcall(['git', 'update-index', '--ignore-submodules', '-q', '--ignore-missing', '--unmerged', '--refresh'])
+            systemcall(
+                [
+                    'git',
+                    'update-index',
+                    '--ignore-submodules',
+                    '-q',
+                    '--ignore-missing',
+                    '--unmerged',
+                    '--refresh',
+                ]
+            )
 
         finally:
             msgfile.unlink(missing_ok=True)

@@ -54,34 +54,32 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
         shell = True
         prog = os.path.basename(cmd.split(None, 1)[0])
 
-    rc = subprocess.call(cmd, shell=shell, close_fds=closefds,
-                         cwd=cwd)
+    rc = subprocess.call(cmd, shell=shell, close_fds=closefds, cwd=cwd)
     if rc and onerr:
-        errmsg = '%s %s' % (prog,
-                            explainexit(rc)[0])
+        errmsg = "%s %s" % (prog, explainexit(rc)[0])
         if errprefix:
-            errmsg = '%s: %s' % (errprefix, errmsg)
+            errmsg = "%s: %s" % (errprefix, errmsg)
         raise onerr(errmsg)
     return rc
 
 
 @overload
 def systemcall(
-        cmd: Sequence[str] | Sequence[bytes],
-        encoding: str,
-        dir: Optional[os.PathLike | str] = None,
-        onerr=None,
-        errprefix=None
+    cmd: Sequence[str] | Sequence[bytes],
+    encoding: str,
+    dir: Optional[os.PathLike | str] = None,
+    onerr=None,
+    errprefix=None,
 ) -> str:
     ...
 
 
 @overload
 def systemcall(
-        cmd: Sequence[str] | Sequence[bytes],
-        dir: Optional[os.PathLike | str] = None,
-        onerr=None,
-        errprefix=None
+    cmd: Sequence[str] | Sequence[bytes],
+    dir: Optional[os.PathLike | str] = None,
+    onerr=None,
+    errprefix=None,
 ) -> bytes:
     ...
 
@@ -100,8 +98,7 @@ def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
     rc = p.returncode
 
     if rc and onerr:
-        errmsg = '%s %s' % (os.path.basename(cmd[0]),
-                            explainexit(rc)[0])
+        errmsg = '%s %s' % (os.path.basename(cmd[0]), explainexit(rc)[0])
         if errprefix:
             errmsg = '%s: %s' % (errprefix, errmsg)
         raise onerr(errmsg)
