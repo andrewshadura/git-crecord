@@ -6,17 +6,18 @@
 # the GNU General Public License, incorporated herein by reference.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
+from __future__ import annotations
 
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 from . import util
 
 INDEX_FILENAME = "index"
 
 ObjectHash = str
+
 
 class GitTree:
     def __init__(self, tree):
@@ -28,6 +29,7 @@ class GitTree:
     def read(self):
         util.system(['git', 'read-tree', '--reset',
                      self._tree], onerr=RuntimeError)
+
 
 class GitIndex:
     def __init__(self, filename):
@@ -56,7 +58,7 @@ class GitIndex:
 
 
 class GitRepo:
-    def __init__(self, path: Optional[os.PathLike]):
+    def __init__(self, path: os.PathLike | str | None):
         try:
             self.path = Path(util.systemcall(
                 ['git', 'rev-parse', '--show-toplevel'],

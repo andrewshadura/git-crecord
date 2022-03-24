@@ -35,6 +35,7 @@ class Config:
     def set(self, section, item, value, source=""):
         raise NotImplementedError
 
+
 class Ui:
     def __init__(self, repo: GitRepo):
         self.repo = repo
@@ -194,7 +195,7 @@ def main():
     os.chdir(repo.path)
 
     try:
-        crecord_core.dorecord(ui, repo, **(opts))
+        crecord_core.dorecord(ui, repo, **opts)
     except Abort as inst:
         sinst = str(inst)
         if opts['quiet'] and 'commit failed' in sinst:
