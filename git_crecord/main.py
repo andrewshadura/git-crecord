@@ -103,7 +103,7 @@ class Ui:
         to_add = [f for f in files if os.path.exists(f)]
         if to_add:
             system(
-                ['git', 'add', '-f', '-N', '--'] + to_add,
+                ['git', 'add', '-f', '--'] + to_add,
                 onerr=Abort,
                 errprefix=_("add failed"),
             )

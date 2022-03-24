@@ -1142,13 +1142,14 @@ The following are valid keystrokes:
         elif keypressed in ['a']:
             self.toggleamend()
         elif keypressed in ["c"]:
+            self.opts['confirm'] |= self.opts['operation'] != 'crecord'
             if self.confirmcommit():
-                self.opts['commit'] = True
+                self.opts['operation'] = 'crecord'
                 return True
         elif keypressed in ["s"]:
-            self.opts['commit'] = False
+            self.opts['confirm'] |= self.opts['operation'] != 'cstage'
             if self.confirmcommit():
-                self.opts['commit'] = False
+                self.opts['operation'] = 'cstage'
                 return True
         elif keypressed in ["r"]:
             if self.confirmcommit(review=True):
