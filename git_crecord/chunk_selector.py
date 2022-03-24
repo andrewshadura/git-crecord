@@ -228,7 +228,6 @@ class CursesChunkSelector:
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
         """
-        #self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
 
         nextitem = currentitem.nextitem()
@@ -335,7 +334,6 @@ class CursesChunkSelector:
         """Scroll the screen to fully show the currently-selected"""
         selstart = self.selecteditemstartline
         selend = self.selecteditemendline
-        #selnumlines = selend - selstart
         padstart = self.firstlineofpadtoprint
         padend = padstart + self.yscreensize - self.numstatuslines - 1
         # 'buffered' pad start/end values which scroll with a certain
