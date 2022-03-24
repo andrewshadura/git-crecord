@@ -1075,10 +1075,7 @@ The following are valid keystrokes:
 
         if response is None or len(response) == 0 or response == "\n":
             response = "y"
-        if response.lower().startswith("y"):
-            return True
-        else:
-            return False
+        return response.lower().startswith("y")
 
     def recenterdisplayedarea(self):
         """
