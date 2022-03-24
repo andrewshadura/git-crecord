@@ -188,12 +188,13 @@ def trim(s, width, ellipsis='', leftside=False):
     if width <= 0:  # no enough room even for ellipsis
         return ellipsis[:width + len(ellipsis)]
 
+    # TODO: find a way to get rid of the lambdas
     if leftside:
-        uslice = lambda i: s[i:]
-        concat = lambda s: ellipsis + s
+        uslice = lambda i: s[i:]  # noqa: E731
+        concat = lambda s: ellipsis + s  # noqa: E731
     else:
-        uslice = lambda i: s[:-i]
-        concat = lambda s: s + ellipsis
+        uslice = lambda i: s[:-i]  # noqa: E731
+        concat = lambda s: s + ellipsis  # noqa: E731
     for i in range(1, len(s)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
