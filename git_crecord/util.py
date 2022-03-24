@@ -12,6 +12,7 @@
 # Some of these utilities were originally taken from Mercurial.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
+from __future__ import annotations
 
 from gettext import gettext as _
 import os
@@ -66,9 +67,9 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
 
 @overload
 def systemcall(
-        cmd: Sequence[AnyStr],
+        cmd: Sequence[str] | Sequence[bytes],
         encoding: str,
-        dir: Optional[os.PathLike] = None,
+        dir: Optional[os.PathLike | str] = None,
         onerr=None,
         errprefix=None
 ) -> str:
@@ -77,8 +78,8 @@ def systemcall(
 
 @overload
 def systemcall(
-        cmd: Sequence[AnyStr],
-        dir: Optional[os.PathLike] = None,
+        cmd: Sequence[str] | Sequence[bytes],
+        dir: Optional[os.PathLike | str] = None,
         onerr=None,
         errprefix=None
 ) -> bytes:
