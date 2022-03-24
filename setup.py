@@ -11,7 +11,8 @@ __manpages__ = 'git-*.rst'
 
 
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+    with open(os.path.join(os.path.dirname(__file__), fname)) as f:
+        return f.read()
 
 
 def glob(fname):
@@ -20,7 +21,7 @@ def glob(fname):
 
 def generate_manpage(src, dst):
     import docutils.core
-    log.info("generating a manpage from %s to %s", src, dst)
+    log.info("generating a manpage from %s as %s", src, dst)
     docutils.core.publish_file(source_path=src, destination_path=dst, writer_name='manpage')
 
 
@@ -42,7 +43,7 @@ def man_path(fname):
 
 
 def man_files(pattern):
-    return list(map(man_path, map(man_name, glob(pattern))))
+    return [man_path(man_name(f)) for f in glob(pattern)]
 
 
 # monkey patch setuptools to use distutils owner/group functionality
