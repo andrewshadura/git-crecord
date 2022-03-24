@@ -16,7 +16,7 @@ def line_selector(selections: Sequence[bool], opts, headers, ui):
 
 
 @pytest.mark.parametrize(
-    "selections, expected",
+    ("selections", "expected"),
     [
         pytest.param(
             [True, False, True, False],
