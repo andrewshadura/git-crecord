@@ -586,7 +586,7 @@ class CursesChunkSelector:
             _headermessages[self.opts['operation']],
             '-',
             _('[x]=selected **=collapsed'),
-            _('c: confirm'),
+            _('c: commit'),
             _('q: abort'),
             _('arrow keys: move/expand/collapse'),
             _('space: deselect') if selected else _('space: select'),
