@@ -8,3 +8,6 @@
 
 # Remove an unused function and unused function parameters (recordfunc)
 545dce2e5d0168ccf9e33ab42f6a26b63a45332f
+
+# Reformat sources
+624188a98126c5059ae8a71b2f44cb082669e11b
