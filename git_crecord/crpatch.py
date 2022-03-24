@@ -427,6 +427,9 @@ class Header(PatchNode):
 class HunkLine(PatchNode):
     """Represents a changed line in a hunk"""
 
+    DELETE = b'-'
+    INSERT = b'+'
+
     linetext: bytes
     hunk: 'Hunk'
 
@@ -586,10 +589,10 @@ class Hunk(PatchNode):
     def countchanges(self) -> tuple[int, int]:
         """changedlines -> (n+,n-)"""
         add = len(
-            [line for line in self.changedlines if line.applied and line.diffop == b"+"]
+            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.INSERT]
         )
         rem = len(
-            [line for line in self.changedlines if line.applied and line.diffop == b"-"]
+            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.DELETE]
         )
         return add, rem
 
