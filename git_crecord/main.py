@@ -247,3 +247,10 @@ def main():
         else:
             sys.stderr.write(_("abort: %s\n") % sinst)
             sys.exit(1)
+
+
+if __name__ == '__main__':
+    sys.argv.pop(0)
+    if not sys.argv:
+        sys.argv = ['git-crecord']
+    main()
