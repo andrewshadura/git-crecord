@@ -89,7 +89,7 @@ class Ui:
             editor = self.editor
 
             system(
-                '%s "%s"' % (editor, f.name), onerr=Abort, errprefix=_("edit failed")
+                '%s "%s"' % (editor, f.name), onerr=Abort, errprefix=_("edit failed"),
             )
 
             t = Path(f.name).read_bytes()
@@ -171,7 +171,7 @@ class Ui:
                     '--ignore-missing',
                     '--unmerged',
                     '--refresh',
-                ]
+                ],
             )
 
         finally:
@@ -195,25 +195,37 @@ def main():
     parser.add_argument('--author', default=None, help='override author for commit')
     parser.add_argument('--date', default=None, help='override date for commit')
     parser.add_argument('-m', '--message', default=None, help='commit message')
-    parser.add_argument('-c', '--reedit-message', metavar='COMMIT', default=None,
-                        help='reuse and edit message from specified commit')
-    parser.add_argument('-C', '--reuse-message', metavar='COMMIT', default=None,
-                        help='reuse message from specified commit')
-    parser.add_argument('--fixup', metavar='COMMIT', default=None,
-                        help='create autosquash commit message to fixup specified commit')
-    parser.add_argument('--reset-author', action='store_true', default=False,
-                        help='the commit is authored by me now (used with -C/-c/--amend)')
+    parser.add_argument(
+        '-c', '--reedit-message', metavar='COMMIT', default=None,
+        help='reuse and edit message from specified commit',
+    )
+    parser.add_argument(
+        '-C', '--reuse-message', metavar='COMMIT', default=None,
+        help='reuse message from specified commit',
+    )
+    parser.add_argument(
+        '--fixup', metavar='COMMIT', default=None,
+        help='create autosquash commit message to fixup specified commit',
+    )
+    parser.add_argument(
+        '--reset-author', action='store_true', default=False,
+        help='the commit is authored by me now (used with -C/-c/--amend)',
+    )
     parser.add_argument('-s', '--signoff', action='store_true', default=False, help='add Signed-off-by:')
     parser.add_argument('--amend', action='store_true', default=False, help='amend previous commit')
-    parser.add_argument('-S', '--gpg-sign', metavar='KEY-ID', nargs='?', const=True, default=None,
-                        help='GPG sign commit')
+    parser.add_argument(
+        '-S', '--gpg-sign', metavar='KEY-ID', nargs='?', const=True, default=None,
+        help='GPG sign commit',
+    )
     parser.add_argument('--no-gpg-sign', action='store_true', default=False, help=argparse.SUPPRESS)
     parser.add_argument('-v', '--verbose', default=0, action='count', help='be more verbose')
     parser.add_argument('--debug', action='store_const', const=2, dest='verbose', help='be debuggingly verbose')
     parser.add_argument('--cleanup', default=None, help=argparse.SUPPRESS)
     parser.add_argument('--quiet', default=False, action='store_true', help='pass --quiet to git commit')
-    parser.add_argument('--confirm', default=False, action='store_true',
-                        help='show confirmation prompt after selecting changes')
+    parser.add_argument(
+        '--confirm', default=False, action='store_true',
+        help='show confirmation prompt after selecting changes',
+    )
     parser.add_argument('--version', action='version', version=f'%(prog)s {version}')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--cached', '--staged', action='store_true', default=False, help=argparse.SUPPRESS)

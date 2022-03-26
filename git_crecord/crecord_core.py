@@ -64,7 +64,7 @@ def dorecord(ui, repo, *pats, **opts):
         git_base.append("HEAD")
 
     p = subprocess.Popen(
-        git_args + git_base, stdout=subprocess.PIPE, close_fds=closefds
+        git_args + git_base, stdout=subprocess.PIPE, close_fds=closefds,
     )
     fp = cast(IO[bytes], p.stdout)
 
@@ -125,8 +125,10 @@ def dorecord(ui, repo, *pats, **opts):
             if f not in (modified | added):
                 continue
             prefix = os.fsdecode(f).replace('/', '_') + '.'
-            fd, tmpname = tempfile.mkstemp(prefix=prefix,
-                                           dir=backupdir)
+            fd, tmpname = tempfile.mkstemp(
+                prefix=prefix,
+                dir=backupdir,
+            )
             os.close(fd)
             ui.debug('backup %r as %r' % (f, tmpname))
             pathname = repo.path / f

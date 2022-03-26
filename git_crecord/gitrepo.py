@@ -65,14 +65,14 @@ class GitRepo:
                     dir=path,
                     encoding="fs",
                     onerr=util.Abort,
-                ).rstrip('\n')
+                ).rstrip('\n'),
             )
             self._controldir = Path(
                 util.systemcall(
                     ['git', 'rev-parse', '--git-dir'],
                     dir=path,
                     encoding="fs",
-                ).rstrip('\n')
+                ).rstrip('\n'),
             )
             if not self._controldir.is_dir():
                 raise util.Abort

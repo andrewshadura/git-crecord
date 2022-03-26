@@ -75,6 +75,6 @@ setup(
     data_files=[
         (os.path.join('share', 'doc', __name__), glob('*.rst')),
         (os.path.join('share', 'doc', __name__), glob('*.png')),
-        (os.path.join('share', 'doc', __name__), ['CONTRIBUTORS', 'COPYING'])
-    ] + man_files(__manpages__)
+        (os.path.join('share', 'doc', __name__), ['CONTRIBUTORS', 'COPYING']),
+    ] + man_files(__manpages__),
 )

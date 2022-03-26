@@ -52,7 +52,7 @@ def line_selector(selections: Sequence[bool], opts, headers, ui):
             ''',
             id="extra addition",
         ),
-    ]
+    ],
 )
 def test_hunk_splitting(selections: Sequence[bool], expected: str):
     diff = dedent(
@@ -67,7 +67,7 @@ def test_hunk_splitting(selections: Sequence[bool], expected: str):
         -    git python3-pip ssl-cert
         + && apt-get install -y supervisor python3.9
         +    git python3-pip ssl-cert time
-        '''
+        ''',
     ).lstrip('\n').encode()
     patch = parsepatch(io.BytesIO(diff))
     applied = filterpatch(None, patch, partial(line_selector, selections), None)

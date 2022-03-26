@@ -311,9 +311,13 @@ class Header(PatchNode):
                     fp.write(_('this is a binary file\n'))
                 break
             if h.startswith(b'---'):
-                fp.write(_('%d hunks, %d lines changed\n') %
-                         (len(self.hunks),
-                          sum([max(h.added, h.removed) for h in self.hunks])))
+                fp.write(
+                    _('%d hunks, %d lines changed\n') %
+                    (
+                        len(self.hunks),
+                        sum([max(h.added, h.removed) for h in self.hunks]),
+                    ),
+                )
                 break
             fp.write(h.decode("UTF-8", errors="hexreplace"))
 
@@ -351,9 +355,11 @@ class Header(PatchNode):
         return (files[1] or files[0]).decode("UTF-8", errors="hexreplace")
 
     def __repr__(self) -> str:
-        return '<header %s>' % (' '.join(
-            repr(x) for x in self.files()
-        ))
+        return '<header %s>' % (
+            ' '.join(
+                repr(x) for x in self.files()
+            )
+        )
 
     def special(self) -> bool:
         return any(self.special_re.match(h) for h in self.header)
@@ -454,7 +460,7 @@ class HunkLine(PatchNode):
             self.linetext[0],
             self.offset,
             '[x]' if self.applied else '[ ]',
-            self.linetext[1:10]
+            self.linetext[1:10],
         )
 
     def __str__(self) -> str:
@@ -589,10 +595,10 @@ class Hunk(PatchNode):
     def countchanges(self) -> tuple[int, int]:
         """changedlines -> (n+,n-)"""
         add = len(
-            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.INSERT]
+            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.INSERT],
         )
         rem = len(
-            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.DELETE]
+            [line for line in self.changedlines if line.applied and line.diffop == HunkLine.DELETE],
         )
         return add, rem
 
@@ -611,8 +617,10 @@ class Hunk(PatchNode):
         """Calculate the number of removed lines converted to context lines"""
         removedconvertedtocontext = self.originalremoved - self.removed
 
-        contextlen = (len(self.before) + len(self.after) +
-                      removedconvertedtocontext)
+        contextlen = (
+            len(self.before) + len(self.after) +
+            removedconvertedtocontext
+        )
         if self.after and self.after[-1] == b'\\ No newline at end of file\n':
             contextlen -= 1
         fromlen = contextlen + self.removed
@@ -654,8 +662,8 @@ class Hunk(PatchNode):
         for line in sorted(
                 self.changedlines,
                 key=lambda line: (
-                    line.offset, line.diffop == HunkLine.INSERT
-                )
+                    line.offset, line.diffop == HunkLine.INSERT,
+                ),
         ):
             if line.diffop == HunkLine.INSERT and not line.applied:
                 continue
@@ -951,18 +959,26 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
             return self.headers
 
         transitions = {
-            'file': {'context': addcontext,
-                     'file': newfile,
-                     'hunk': addhunk,
-                     'range': addrange},
-            'context': {'file': newfile,
-                        'hunk': addhunk,
-                        'range': addrange},
-            'hunk': {'context': addcontext,
-                     'file': newfile,
-                     'range': addrange},
-            'range': {'context': addcontext,
-                      'hunk': addhunk},
+            'file': {
+                'context': addcontext,
+                'file': newfile,
+                'hunk': addhunk,
+                'range': addrange,
+            },
+            'context': {
+                'file': newfile,
+                'hunk': addhunk,
+                'range': addrange,
+            },
+            'hunk': {
+                'context': addcontext,
+                'file': newfile,
+                'range': addrange,
+            },
+            'range': {
+                'context': addcontext,
+                'hunk': addhunk,
+            },
         }
 
     p = Parser()
@@ -973,8 +989,10 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
         try:
             p.transitions[state][newstate](p, data)
         except KeyError:
-            raise PatchError('unhandled transition: %s -> %s' %
-                             (state, newstate))
+            raise PatchError(
+                'unhandled transition: %s -> %s' %
+                (state, newstate),
+            )
         state = newstate
     return PatchRoot(p.finished())
 
