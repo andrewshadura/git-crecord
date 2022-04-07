@@ -429,6 +429,8 @@ class HunkLine(PatchNode):
 
     DELETE = b'-'
     INSERT = b'+'
+    CONTEXT = b' '
+    HUNK = b'@'
 
     linetext: bytes
     hunk: 'Hunk'
@@ -648,29 +650,35 @@ class Hunk(PatchNode):
 
         return fromtoline
 
-    def write(self, fp: IO[bytes]) -> None:
+    def iterlines(self, all: bool = False):
         # updated self.added/removed, which are used by getfromtoline()
         self.added, self.removed = self.countchanges()
-        fp.write(self.getfromtoline())
-        fp.write(b''.join(self.before))
+        yield HunkLine.HUNK, self.getfromtoline()
+        for line in self.before:
+            yield HunkLine.CONTEXT, line
 
         # Include these lines:
         # (1) all applied lines
         # (2) all unapplied removal lines (converted context lines)
         # Lines are sorted by their offset in the original hunk,
         # with removals coming first.
-        for line in sorted(
-                self.changedlines,
-                key=lambda line: (
-                    line.offset, line.diffop == HunkLine.INSERT,
-                ),
+        for hunkline in sorted(
+            self.changedlines,
+            key=lambda line: (
+                line.offset, line.diffop == HunkLine.INSERT,
+            ),
         ):
-            if line.diffop == HunkLine.INSERT and not line.applied:
+            if hunkline.diffop == HunkLine.INSERT and not (hunkline.applied or all):
                 continue
 
-            fp.write(bytes(line))
+            yield hunkline.diffop, bytes(hunkline)
 
-        fp.write(b''.join(self.after))
+        for line in self.after:
+            yield HunkLine.CONTEXT, line
+
+    def write(self, fp: IO[bytes]) -> None:
+        for _, line in self.iterlines():
+            fp.write(line)
 
     def reversehunks(self) -> 'Hunk':
         r"""Make the hunk apply in the other direction.
