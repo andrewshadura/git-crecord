@@ -132,6 +132,8 @@ def scanpatch(fp: IO[bytes]):
             yield 'context', scanwhile(line, lambda l: l[0] in b' \\')
         elif line[0] in b'-+':
             yield 'hunk', scanwhile(line, lambda l: l[0] in b'-+\\')
+        elif line.startswith(b'* Unmerged path '):
+            continue
         else:
             m = lines_re.match(line)
             if m:
@@ -1008,7 +1010,8 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
 def filterpatch(opts, patch: PatchRoot, chunkselector, ui):
     r"""Interactively filter patch chunks into applied-only chunks
 
-    >>> rawpatch = b'''diff --git a/dir/file.c b/dir/file.c
+    >>> rawpatch = b'''* Unmerged path .gitignore
+    ... diff --git a/dir/file.c b/dir/file.c
     ... index e548702cb275..28208f7ff2ac 100644
     ... --- a/dir/file.c
     ... +++ b/dir/file.c
