@@ -129,7 +129,7 @@ def scanpatch(fp: IO[bytes]):
                 lr.push(fromfile)
             yield 'file', header
         elif line.startswith(b' '):
-            yield 'context', scanwhile(line, lambda l: l[0] in b' \\')
+            yield 'context', scanwhile(line, lambda l: l[0] in b' ')
         elif line[0] in b'-+':
             yield 'hunk', scanwhile(line, lambda l: l[0] in b'-+\\')
         elif line.startswith(b'* Unmerged path '):
@@ -433,6 +433,7 @@ class HunkLine(PatchNode):
     INSERT = b'+'
     CONTEXT = b' '
     HUNK = b'@'
+    NOEOL = b'\\'
 
     linetext: bytes
     hunk: 'Hunk'
@@ -450,7 +451,7 @@ class HunkLine(PatchNode):
         self.offset = 0
 
     def __bytes__(self):
-        if self.applied:
+        if self.applied or self.diffop == HunkLine.NOEOL:
             return self.linetext
         else:
             return b' ' + self.linetext[1:]
@@ -609,13 +610,20 @@ class Hunk(PatchNode):
     def countoffsets(self):
         fromline = 0
         toline = 0
+        deletes = False
         for line in self.changedlines:
             if line.diffop == HunkLine.INSERT:
                 fromline += 1
                 line.offset = fromline
             if line.diffop == HunkLine.DELETE:
+                deletes = True
                 toline += 1
                 line.offset = toline
+            if line.diffop == HunkLine.NOEOL:
+                if not deletes:
+                    line.offset = fromtoline
+                else:
+                    line.offset = toline
 
     def getfromtoline(self):
         """Calculate the number of removed lines converted to context lines"""
@@ -813,6 +821,32 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
      8
     @@ -8,0 +10,1 @@
     +9
+
+    Parsing a patch changing the EOL at the EOF:
+    >>> rawpatch = b'''diff --git a/test b/test
+    ... --- a/test
+    ... +++ b/test
+    ... @@ -11,5 +11,5 @@
+    ...  foo
+    ...  bar
+    ...  baz
+    ... -qoox
+    ... -qooox
+    ... \\ No newline at end of file
+    ... +quux
+    ... +quuux'''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> headers = parsepatch(fp)
+    >>> print(headers[0].hunks[0])
+    @@ -11,5 +11,5 @@
+     foo
+     bar
+     baz
+    -qoox
+    +quux
+    -qooox
+    \ No newline at end of file
+    +quuux
 
     It is possible to handle non-UTF-8 patches:
     >>> rawpatch = b'''diff --git a/test b/test
