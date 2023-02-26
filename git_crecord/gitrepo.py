@@ -24,7 +24,7 @@ class GitTree:
         self._tree = tree
 
     def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__, self._tree)
+        return f"{self.__class__.__name__}({self._tree!r})"
 
     def read(self):
         util.system(['git', 'read-tree', '--reset', self._tree], onerr=RuntimeError)
@@ -36,7 +36,7 @@ class GitIndex:
         self.indextree = None
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__, self._filename, self.indextree)
+        return f"{self.__class__.__name__}({self._filename!r}, {self.indextree!r})"
 
     def commit(self) -> ObjectHash:
         return util.systemcall(
@@ -80,7 +80,7 @@ class GitRepo:
             sys.exit(1)
 
     def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, self.path)
+        return f"{self.__class__.__name__}({self.path})"
 
     @property
     def controldir(self) -> Path:

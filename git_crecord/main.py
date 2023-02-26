@@ -25,7 +25,7 @@ class Config:
     def get(self, section, item, default=None) -> Optional[str]:
         try:
             return systemcall(
-                ['git', 'config', '--get', '%s.%s' % (section, item)],
+                ['git', 'config', '--get', f'{section}.{item}'],
                 onerr=KeyError,
                 encoding="UTF-8",
             ).rstrip('\n')
@@ -89,7 +89,7 @@ class Ui:
             editor = self.editor
 
             system(
-                '%s "%s"' % (editor, f.name), onerr=Abort, errprefix=_("edit failed"),
+                f'{editor} "{f.name}"', onerr=Abort, errprefix=_("edit failed"),
             )
 
             t = Path(f.name).read_bytes()
@@ -140,7 +140,7 @@ class Ui:
                         if v is True:
                             args.append("--%s" % k.replace("_", "-"))
                     else:
-                        args.append("--%s=%s" % (k.replace("_", "-"), v))
+                        args.append("--{}={}".format(k.replace("_", "-"), v))
 
             to_add = [f for f in files if os.path.exists(f)]
             if to_add:

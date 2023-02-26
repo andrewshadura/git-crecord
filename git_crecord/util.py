@@ -58,9 +58,9 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
 
     rc = subprocess.call(cmd, shell=shell, close_fds=closefds, cwd=cwd)
     if rc and onerr:
-        errmsg = "%s %s" % (prog, explainexit(rc)[0])
+        errmsg = f"{prog} {explainexit(rc)[0]}"
         if errprefix:
-            errmsg = "%s: %s" % (errprefix, errmsg)
+            errmsg = f"{errprefix}: {errmsg}"
         raise onerr(errmsg)
     return rc
 
@@ -100,9 +100,9 @@ def systemcall(cmd, encoding=None, dir=None, onerr=None, errprefix=None):
     rc = p.returncode
 
     if rc and onerr:
-        errmsg = '%s %s' % (os.path.basename(cmd[0]), explainexit(rc)[0])
+        errmsg = f'{os.path.basename(cmd[0])} {explainexit(rc)[0]}'
         if errprefix:
-            errmsg = '%s: %s' % (errprefix, errmsg)
+            errmsg = f'{errprefix}: {errmsg}'
         raise onerr(errmsg)
 
     if encoding == "fs":

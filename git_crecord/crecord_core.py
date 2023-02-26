@@ -130,7 +130,7 @@ def dorecord(ui, repo, *pats, **opts):
                 dir=backupdir,
             )
             os.close(fd)
-            ui.debug('backup %r as %r' % (f, tmpname))
+            ui.debug(f'backup {f!r} as {tmpname!r}')
             pathname = repo.path / f
             if os.path.isfile(pathname):
                 copyfile(pathname, tmpname)
@@ -210,11 +210,11 @@ def dorecord(ui, repo, *pats, **opts):
         # 5. finally restore backed-up files
         try:
             for realname, tmpname in backups.items():
-                ui.debug('restoring %r to %r' % (tmpname, realname))
+                ui.debug(f'restoring {tmpname!r} to {realname!r}')
                 copyfile(tmpname, os.path.join(repo.path, realname))
                 os.unlink(tmpname)
             for realname, tmpname in newly_added_backups.items():
-                ui.debug('restoring %r to %r' % (tmpname, realname))
+                ui.debug(f'restoring {tmpname!r} to {realname!r}')
                 copyfile(tmpname, os.path.join(repo.path, realname))
                 os.unlink(tmpname)
             os.rmdir(backupdir)
