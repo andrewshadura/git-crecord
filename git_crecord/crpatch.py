@@ -317,7 +317,7 @@ class Header(PatchNode):
                     _('%d hunks, %d lines changed\n') %
                     (
                         len(self.hunks),
-                        sum([max(h.added, h.removed) for h in self.hunks]),
+                        sum(max(h.added, h.removed) for h in self.hunks),
                     ),
                 )
                 break

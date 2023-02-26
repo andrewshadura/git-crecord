@@ -157,7 +157,7 @@ def dorecord(ui, repo, *pats, **opts):
             fp.seek(0)
 
         # 3a. apply filtered patch to clean repo  (clean)
-        if backups or any((f in contenders for f in removed)):
+        if backups or any(f in contenders for f in removed):
             system(
                 ["git", "checkout", "-f"]
                 + git_base
