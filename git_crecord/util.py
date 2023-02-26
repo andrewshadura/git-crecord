@@ -69,7 +69,7 @@ def system(cmd, cwd=None, onerr=None, errprefix=None):
 def systemcall(
     cmd: Sequence[str] | Sequence[bytes],
     encoding: str,
-    dir: Optional[os.PathLike | str] = None,
+    dir: os.PathLike | str | None = None,
     onerr=None,
     errprefix=None,
 ) -> str:
@@ -79,7 +79,7 @@ def systemcall(
 @overload
 def systemcall(
     cmd: Sequence[str] | Sequence[bytes],
-    dir: Optional[os.PathLike | str] = None,
+    dir: os.PathLike | str | None = None,
     onerr=None,
     errprefix=None,
 ) -> bytes:

@@ -14,7 +14,8 @@ import io
 import re
 from codecs import register_error
 from gettext import gettext as _
-from typing import IO, Iterator, Optional, Sequence, Union
+from typing import IO, Optional, Union
+from collections.abc import Iterator, Sequence
 
 from .util import unwrap_filename
 
