@@ -2,9 +2,8 @@
 
 import fnmatch
 import os
-from distutils import log
 
-from setuptools import setup
+from setuptools import setup, distutils
 from setuptools.command import build_py, sdist
 
 __manpages__ = 'git-*.rst'
@@ -21,7 +20,7 @@ def glob(fname):
 
 def generate_manpage(src, dst):
     import docutils.core
-    log.info("generating a manpage from %s as %s", src, dst)
+    distutils.log.info("generating a manpage from %s as %s", src, dst)
     docutils.core.publish_file(source_path=src, destination_path=dst, writer_name='manpage')
 
 
