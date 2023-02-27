@@ -4,7 +4,7 @@ import fnmatch
 import os
 
 from setuptools import setup, distutils
-from setuptools.command import build_py
+from setuptools.command import build_py as build_py_orig
 
 __manpages__ = 'git-*.rst'
 
@@ -47,18 +47,16 @@ def man_files(pattern):
 
 # monkey patch setuptools to use distutils owner/group functionality
 # and build the manpage on build
-build_py_org = build_py.build_py
 
-
-class build_py_new(build_py_org):
+class build_py(build_py_orig.build_py):
     def run(self):
-        build_py_org.run(self)
+        super().run()
         if not self.dry_run:
             for page in glob(__manpages__):
                 generate_manpage(page, man_name(page))
 
 
-build_py.build_py = build_py_new  # type: ignore
+build_py_orig.build_py = build_py  # type: ignore
 
 __name__ = "git-crecord"
 
