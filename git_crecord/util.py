@@ -21,7 +21,7 @@ import sys
 from collections.abc import Sequence
 from gettext import gettext as _
 from pathlib import Path
-from typing import Optional, overload
+from typing import overload
 
 from .encoding import ucolwidth
 
