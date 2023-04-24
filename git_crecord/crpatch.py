@@ -622,7 +622,7 @@ class Hunk(PatchNode):
                 line.offset = toline
             if line.diffop == HunkLine.NOEOL:
                 if not deletes:
-                    line.offset = fromtoline
+                    line.offset = fromline
                 else:
                     line.offset = toline
 
