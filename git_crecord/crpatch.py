@@ -135,6 +135,8 @@ def scanpatch(fp: IO[bytes]):
             yield 'hunk', scanwhile(line, lambda l: l[0] in b'-+\\')
         elif line.startswith(b'* Unmerged path '):
             continue
+        elif line.startswith(b'\\ No newline at end of file'):
+            continue
         else:
             m = lines_re.match(line)
             if m:
