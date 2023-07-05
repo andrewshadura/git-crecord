@@ -849,6 +849,23 @@ def parsepatch(fp: IO[bytes]) -> PatchRoot:
     \ No newline at end of file
     +quuux
 
+    And the other way around:
+    >>> rawpatch = b'''diff --git a/test b/test
+    ... --- a/test
+    ... +++ b/test
+    ... @@ -1 +1 @@
+    ... -test
+    ... +test
+    ... \\ No newline at end of file
+    ... '''
+    >>> fp = io.BytesIO(rawpatch)
+    >>> headers = parsepatch(fp)
+    >>> print(headers[0].hunks[0])
+    @@ -1,1 +1,1 @@
+    -test
+    +test
+    \ No newline at end of file
+
     It is possible to handle non-UTF-8 patches:
     >>> rawpatch = b'''diff --git a/test b/test
     ... --- /dev/null
