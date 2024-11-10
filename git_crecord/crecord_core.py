@@ -53,6 +53,7 @@ def dorecord(ui, repo, *pats, **opts):
         "-c",
         "diff.mnemonicPrefix=false",
         "diff",
+        "--default-prefix",
         "--binary",
     ]
     git_base = []
